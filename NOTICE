@@ -1,0 +1,14 @@
+   DEPENDENCIES:
+
+ Ds4Cpp currently depends on library CppMicroServices.
+ CppMicroServices is copyrighted by the German Cancer
+ Research Center, Division of Medical and Biological 
+ Informatics (released under and released under the 
+ he Apache Software License 2.0.
+ 4 source files in Ds4Cpp are derivative work of CppMicroServices. The
+ copyright header has been adjusted to reflect it.
+
+ We thank the CppMicroServices team and especially its
+ main author, Sascha Zelzer, for their contribution.
+ 
+ 
