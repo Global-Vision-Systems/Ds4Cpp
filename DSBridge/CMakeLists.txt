@@ -19,7 +19,8 @@ SET(LIBRARY_OUTPUT_PATH ${BASE_WORK_DIRECTORY}/${OUTPUT_PROJECT_BINARIES_DIRECTO
 
 if(BASE_WORK_DIRECTORY)
 	#include Core 
-	include_directories ("${BASE_WORK_DIRECTORY}/${DS4CPP_CORE_NAME}/include")
+	include_directories ("${BASE_WORK_DIRECTORY}/${DS4CPP_CORE_NAME}/service/")
+	include_directories ("${BASE_WORK_DIRECTORY}/${DS4CPP_CORE_NAME}/include/")
 	link_directories(${BASE_WORK_DIRECTORY}/${OUTPUT_PROJECT_BINARIES_DIRECTORY}/${BUILD_TYPE})
 else()
 	message("${DS4CPP_BRIDGE_NAME} Project error : use the parent directory as cmake root. Missing BASE_WORK_DIRECTORY.")

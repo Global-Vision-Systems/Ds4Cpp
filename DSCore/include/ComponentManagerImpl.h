@@ -26,35 +26,36 @@
 #include <string>
 #include <map>
 #include <list>
-#include "../include/Component.h"
-#include "../include/ComponentDescriptor.h"
-#include "../include/ComponentInstance.h"
-#include "../include/ComponentManager.h"
+#include "Component.h"
+#include "ComponentDescriptor.h"
+#include "ComponentInstance.h"
+#include "ComponentManager.h"
 US_USE_NAMESPACE
 namespace ds4cpp
 {
 class ComponentManagerImpl : public::us::Base, public ComponentManager
 {
 private:
-    std::vector<Component*>                             components ;
-    std::map<std::string, std::list<Component*>*>       componentReferences ;
-    ModuleContext*                                      context ;
+    std::vector<Component*>                                     components ;
+    std::map<std::string, std::list<ComponentInstance*>*>       componentReferences ;
+    ModuleContext*                                              context ;
+
+friend class ComponentFactoryImpl ;
 
 public:
     ComponentManagerImpl(ModuleContext* context) ;
-    void newComponent(Module* module, const ComponentDescriptor& descriptor) ;
-
     virtual ~ComponentManagerImpl() ;
-    bool isSatisfied(Component* component) ;
+
+	void newComponent(Module* module, const ComponentDescriptor& descriptor) ;
 
     void handleServiceEvent(ServiceEvent event) ;
 
 private:
-    void processNewComponent(Component* component) ;
+	ComponentInstance *newComponentInstance(Component* component, const us::ServiceProperties& overrideProperties = us::ServiceProperties()) ;
 
-    ComponentInstance* instantiateComponent(Component* component) ;
+	void injectAvailableReferencies(ComponentInstance* component) ;
 
-    void enableIfSatisfied(Component* component) ;
+    bool enableIfSatisfied(ComponentInstance* instance) ;
 } ;
 }       /* namespace ds4cpp */
 #endif /* COMPONENTMANAGER_H_ */

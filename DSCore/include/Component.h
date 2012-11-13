@@ -21,55 +21,50 @@
 #ifndef COMPONENT_H_
 #define COMPONENT_H_
 #pragma warning( disable: 4251 )
-#include <vector>
-#include <list>
-#include <map>
+
 #include <string>
+
 #include <usModule.h>
 #include <usModuleContext.h>
+#include <usServiceProperties.h>
+#include <usServiceReference.h>
+
+#include "ComponentFactoryImpl.h"
 #include "ComponentDescriptor.h"
 #include "ComponentInstance.h"
 #include "ComponentHandle.h"
-US_USE_NAMESPACE
+
 namespace ds4cpp
 {
 class US_ABI_EXPORT Component
 {
-    friend class ComponentManagerImpl ;
-
+	friend class ComponentInstance ;
+	friend class ComponentManagerImpl ;
 private:
+	bool                                                factory ;
     std::vector<ComponentInstance*>                     instances ;
-    std::multimap<std::string, ServiceReference>        references ;
     ComponentHandle*                                    handle ;
-    const Module*                                       module ;
-    bool                                                satisfied ;
-    ComponentInstance* newInstance() ;
+    const us::Module*                                   module ;
+
 
     ComponentHandle* getHandle() ;
+    
+	void *callCreate(ComponentInstance *componentInstance) ;
+	void callActivate(ComponentInstance *componentInstance) ;
+	void callBind(ComponentInstance* componentInstance, const us::ServiceReference& SvcReference, const std::string& interfaceName, ComponentReference::Cardinality cardinality) ;
 
-    void bindService(const std::string& interface, ServiceReference serviceObject) ;
+	void publishServices(ComponentInstance* componentInstance) ;
 
-    void unbindService(const std::string& interface, ServiceReference serviceObject) ;
-
-    void injectAllReferences(ComponentInstance*) ;
-
-    void injectReference(const std::string & interface, ServiceReference) ;
-    void callActivate(ComponentInstance*) ;
-
-    void publishServices(ComponentInstance*) ;
-
-    void computeSatisfied() ;
-
-    ComponentInstance* createInstance() ;
-
-    Component(const Module* module, const ComponentDescriptor& descriptor) ;
+    Component(const us::Module* module, const ComponentDescriptor& descriptor) ;
     virtual ~Component() ;
 
 public:
     const ComponentDescriptor descriptor ;
-    bool isSatisfied() ;
 
-    bool isActive() ;
+	/** Create an empty Component instance */
+	ComponentInstance* newEmptyComponentInstance(const us::ServiceProperties& overrideProperties) ;
+
+	int getNumInstance() const ;
 } ;
 }       /* namespace ds4cpp */
 #endif /* COMPONENT_H_ */

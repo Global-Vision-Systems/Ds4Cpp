@@ -50,18 +50,19 @@ public:
 
         // We have the ComponentManager, manually create the ComponentDescriptor for the
         // Bridge Component
-        std::vector<ComponentReference>*        references      = new std::vector<ComponentReference>() ;
-        std::string                             managerName     = "ds4cpp::ComponentManager" ;  // std::string(us_service_interface_iid<ComponentManager*>());
-        references->push_back(ComponentReference(managerName, managerName, std::string(),
+        std::vector<ComponentReference>        references      = std::vector<ComponentReference>() ;
+        std::string                             managerName    = "ds4cpp::ComponentManager" ;  // std::string(us_service_interface_iid<ComponentManager*>());
+        references.push_back(ComponentReference(managerName, managerName, std::string(),
                                                  ComponentReference::STATIC, ComponentReference::SINGLE,
                                                  ComponentReference::MANDATORY_REF)) ;
         std::string                             providerName = "ds4cpp::ComponentProvider" ;    // std::string(us_service_interface_iid<ComponentManager*>());
-        references->push_back(ComponentReference(providerName, providerName, std::string(),
+        references.push_back(ComponentReference(providerName, providerName, std::string(),
                                                  ComponentReference::DYNAMIC, ComponentReference::MULTIPLE,
                                                  ComponentReference::OPTIONAL_REF)) ;
         std::vector<std::string>                services ;                                      // no provided services
+		::us::ServiceProperties                 properties ;
         ComponentDescriptor*                    bridgeDesc = new ComponentDescriptor("ds4cpp::ComponentDescriptorBridge",
-                                                                                     "", services, *references, true,
+                                                                                     "", services, references, properties, true,
                                                                                      true) ;
 
         // Provide the descriptor to the ComponentManager so that the party can begin!

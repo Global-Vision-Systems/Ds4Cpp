@@ -19,20 +19,32 @@
  *  Created on: 4 mai 2012
  *      Author: simon
  */
-#include "../include/ComponentDescriptor.h"
+#include "ComponentDescriptor.h"
 #include <iostream>
+US_USE_NAMESPACE
 namespace ds4cpp
 {
-ComponentDescriptor::ComponentDescriptor(const string& componentId, const string& implSharedObject, const vector<string>& providedServices, const vector<ComponentReference>& references, bool immediate, bool autoEnable) : componentId(componentId), implSharedObject(implSharedObject), providedServices(
-        new vector<string>(providedServices)), references(
-        new vector<ComponentReference>(references)), immediate(
-        immediate), autoEnable(autoEnable)
+ComponentDescriptor::ComponentDescriptor(const string& componentId, const string& implSharedObject, const vector<string>& providedServices, const vector<ComponentReference>& references, const us::ServiceProperties& properties, bool immediate, bool autoEnable, bool singleton) : 
+		componentId(componentId),
+		implSharedObject(implSharedObject), 
+		providedServices(new vector<string>(providedServices)),
+		references(new vector<ComponentReference>(references)), 
+		properties(new ServiceProperties(properties)),
+		immediate(immediate), 
+		autoEnable(autoEnable),
+		singleton(singleton)
 {
 }
 
-ComponentDescriptor::ComponentDescriptor(const ComponentDescriptor& component) : componentId(component.componentId), implSharedObject(component.implSharedObject), providedServices(
-        component.providedServices), references(component.references), immediate(
-        component.immediate), autoEnable(component.autoEnable)
+ComponentDescriptor::ComponentDescriptor(const ComponentDescriptor& component) : 
+		componentId(component.componentId), 
+		implSharedObject(component.implSharedObject), 
+		providedServices(component.providedServices),
+		references(component.references), 
+		properties(component.properties),
+		immediate(component.immediate), 
+		autoEnable(component.autoEnable),
+		singleton(component.singleton)
 {
 }
 
@@ -61,10 +73,9 @@ ComponentDescriptor::ComponentDescriptor(const ComponentDescriptor& component) :
 // }
 ComponentDescriptor::~ComponentDescriptor()
 {
-    // delete &componentId;
-    // delete &implSharedObject;
     delete providedServices ;
     delete references ;
+	delete properties ;
 }
 }       /* namespace ds4cpp */
 std::ostream& operator<<(std::ostream& o, const ds4cpp::ComponentDescriptor& d)

@@ -18,7 +18,7 @@
  *  Created on: 11 mai 2012
  *      Author: simon
  */
-#include "../include/ComponentManager.h"
+#include "ComponentManager.h"
 #include "ComponentManagerImpl.h"
 #include <usModuleActivator.h>
 #include <usModuleContext.h>

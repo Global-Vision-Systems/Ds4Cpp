@@ -32,11 +32,11 @@
 US_USE_NAMESPACE
 using namespace ds4cpp;
 
-class DSDemoComponentProvider: public ds4cpp::ComponentProvider, public us::Base {
+class DSFactoryDemoComponentProvider: public ds4cpp::ComponentProvider, public us::Base {
 private:
     Module* module;
 public:
-    DSDemoComponentProvider(Module* module) :
+    DSFactoryDemoComponentProvider(Module* module) :
             module(module) {
     }
 
@@ -45,24 +45,7 @@ public:
                 ds4cpp::ComponentDescriptor*>;
 
 
-        // greetdemo.EnglishGreetProvider
-        {
-            std::vector<ComponentReference> references;
-                                
-            std::vector<std::string> services;
-            services.push_back("greetdemo::GreetProvider");
-			
-			::us::ServiceProperties                 properties ;
-
-            ComponentDescriptor* componentDesc =
-                    new ds4cpp::ComponentDescriptor(
-                            "greetdemo::EnglishGreetProvider",
-                            "" /* containing module */, services, references, properties,
-							true, true);
-
-            result->push_back(componentDesc);
-        }
-        // greetdemo.FrenchGreetProvider
+        // greetdemo.GenericGreetProvider Factory
         {
             std::vector<ComponentReference> references;
                                 
@@ -70,12 +53,16 @@ public:
             services.push_back("greetdemo::GreetProvider");
 
 			::us::ServiceProperties                 properties ;
+			//Default parameters that will be overrided
+			properties[std::string("providedLang")] = std::string("??") ;
+			properties[std::string("greeting")] = std::string("??") ;
+			properties[std::string("defaultTarget")] = std::string("??") ;
 
             ComponentDescriptor* componentDesc =
                     new ds4cpp::ComponentDescriptor(
-                            "greetdemo::FrenchGreetProvider",
+                            "greetdemo::GenericGreetProvider",
                             "" /* containing module */, services, references, properties,
-							true, true);
+							true, true, false); // False because it is a factory
 
             result->push_back(componentDesc);
         }
@@ -84,14 +71,22 @@ public:
             std::vector<ComponentReference> references ;
             references.push_back(
                     ComponentReference("greetdemo::GreetProvider", "greetdemo::GreetProvider",
-							std::string(""), ComponentReference::DYNAMIC,
+							std::string("(providedLang=${requireLang})"), ComponentReference::DYNAMIC, //Dynamic LDAP Filter (useful for factory)
                             ComponentReference::MULTIPLE,
                             ComponentReference::OPTIONAL_REF));
+			// Require GenericGreetProvider factory
+			std::string factoryTarget = "(" + DS4CPP_FACTORY_COMPONENT_NAME + "=greetdemo::GenericGreetProvider)" ;
+            references.push_back(
+				ComponentReference(DS4CPP_FACTORY_SERVICE_NAME, DS4CPP_FACTORY_SERVICE_NAME,
+				factoryTarget, ComponentReference::DYNAMIC, 
+                            ComponentReference::SINGLE,
+							ComponentReference::MANDATORY_REF));
                                 
             std::vector<std::string> services;
             services.push_back("greetdemo::GreetManager");
 
 			::us::ServiceProperties                 properties ;
+			properties[std::string("requireLang")] = std::string("*") ; //Target will be replaced by this
 
 			ComponentDescriptor* componentDesc =
                     new ds4cpp::ComponentDescriptor(
@@ -137,7 +132,7 @@ public:
 
     void Load(ModuleContext* context) {
         context->RegisterService("ds4cpp::ComponentProvider",
-                new DSDemoComponentProvider(context->GetModule()));
+                new DSFactoryDemoComponentProvider(context->GetModule()));
 
     }
 
@@ -148,9 +143,9 @@ public:
 };
 
 #ifdef _DEBUG
-US_EXPORT_MODULE_ACTIVATOR(DSDemod, Activator)
+US_EXPORT_MODULE_ACTIVATOR(DSFactoryDemod, Activator)
 #else
-US_EXPORT_MODULE_ACTIVATOR(DSDemo, Activator)
+US_EXPORT_MODULE_ACTIVATOR(DSFactoryDemo, Activator)
 #endif
 //![Activator]
 
@@ -158,8 +153,8 @@ US_EXPORT_MODULE_ACTIVATOR(DSDemo, Activator)
 
 
 #ifdef _DEBUG
-US_INITIALIZE_MODULE("DS Greet Demo", "DSDemod", "", "1.0.0")
+US_INITIALIZE_MODULE("DS Greet Factory Demo", "DSFactoryDemod", "", "1.0.0")
 #else
-US_INITIALIZE_MODULE("DS Greet Demo", "DSDemo", "", "1.0.0")
+US_INITIALIZE_MODULE("DS Greet Factory Demo", "DSFactoryDemo", "", "1.0.0")
 #endif
 

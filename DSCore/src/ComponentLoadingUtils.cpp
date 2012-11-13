@@ -19,7 +19,7 @@
  *      Author: simon
  */
 
-#include "../include/ComponentLoadingUtils.h"
+#include "ComponentLoadingUtils.h"
 
 
 namespace ds4cpp {

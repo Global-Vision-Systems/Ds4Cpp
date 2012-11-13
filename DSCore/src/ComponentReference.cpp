@@ -18,7 +18,7 @@
  *  Created on: 4 mai 2012
  *      Author: simon
  */
-#include "../include/ComponentReference.h"
+#include "ComponentReference.h"
 #include <iostream>
 namespace ds4cpp
 {

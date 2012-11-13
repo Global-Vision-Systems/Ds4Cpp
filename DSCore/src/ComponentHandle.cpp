@@ -14,7 +14,7 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
-#include "../include/ComponentHandle.h"
+#include "ComponentHandle.h"
 #ifndef US_PLATFORM_POSIX
 #include <strsafe.h>
 #endif
@@ -30,6 +30,11 @@ ComponentHandle::ComponentHandle(const std::string& name) : name(name), osHandle
 
 ComponentHandle::~ComponentHandle()
 {
+}
+
+bool ComponentHandle::isLoaded() const 
+{
+	return osHandle != 0 ;
 }
 
 ComponentHandle* ComponentHandle::load()
@@ -122,22 +127,31 @@ void ComponentHandle::callMethod1(const std::string& methodName, void* instance,
     return funCallMethod1(instance, param) ;
 }
 
-void ComponentHandle::callActivate(const std::string& methodName, void* instance)
+void ComponentHandle::callActivate(const std::string& methodName, void* instance, const std::map<std::string, std::string>& param)
 {
-    void (* funActivateMethod)(void*) ;
+	// Typedefs
+	typedef void (* Activate)(void*) ;
+	typedef void (* ActivateParam)(void*, const std::map<std::string, std::string>&) ;
+
+	// Method
+    Activate funActivateMethod = NULL;
+	ActivateParam funActivateMethodParam = NULL ;
+
+	std::string activateParamName = methodName + "_param" ;
 #ifdef US_PLATFORM_POSIX
-    funActivateMethod = (void (*)(void*))dlsym(osHandle, methodName.c_str()) ;
-    if (!funActivateMethod)
+	funActivateMethodParam = (ActivateParam) dlsym(osHandle, activateParamName.c_str()) ;
+    funActivateMethod = (Activate) dlsym(osHandle, methodName.c_str()) ;
+    if (!funActivateMethod && !funActivateMethodParam)
     {
         const char* err = dlerror() ;
 
         // fail silently if activate isn't here!
-        // TODO Log as DEBUG
         US_DEBUG << "DEBUG: " << name << ": Couldn't find activate method" ;
     }
 #else
-    funActivateMethod = (void (*)(void*)) ::GetProcAddress((HMODULE)osHandle, methodName.c_str()) ;
-    if (!funActivateMethod)
+	funActivateMethodParam = (ActivateParam) ::GetProcAddress((HMODULE)osHandle, activateParamName.c_str()) ;
+    funActivateMethod = (Activate) ::GetProcAddress((HMODULE)osHandle, methodName.c_str()) ;
+    if (!funActivateMethod && !funActivateMethodParam)
     {
         std::string             errMsg = "callActivate " ;
         std::ostringstream      oss ;
@@ -145,10 +159,14 @@ void ComponentHandle::callActivate(const std::string& methodName, void* instance
         errMsg.append(methodName).append("failed with error: ").append(oss.str()) ;
 
         // fail silently if activate isn't here!
-        // TODO Log as DEBUG
         US_DEBUG << "DEBUG: " << name << " " << errMsg ;
     }
 #endif
+	if (funActivateMethodParam)
+	{
+		funActivateMethodParam(instance, param) ;
+		return ;
+	}
     if (funActivateMethod)
     {
         funActivateMethod(instance) ;

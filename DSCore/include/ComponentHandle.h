@@ -19,6 +19,7 @@
 #include <usUtils_p.h>
 #include <usModuleRegistry.h>
 #include <usModuleActivator.h>
+#include <map>
 
 // UNIX Defines
 #if defined (US_PLATFORM_POSIX)
@@ -48,6 +49,9 @@ private:
 public:
     ComponentHandle(const std::string&) ;
     virtual ~ComponentHandle() ;
+
+	bool isLoaded() const ;
+
     ComponentHandle* load() ;
 
     void* createObject(const std::string& createFunName) ;
@@ -57,7 +61,7 @@ public:
      */
     void callMethod1(const std::string& methodName, void* instance, void* param) ;
 
-    void callActivate(const std::string& methodName, void* instance) ;
+    void callActivate(const std::string& methodName, void* instance, const std::map<std::string, std::string>& param) ;
 
     void unload() ;
 

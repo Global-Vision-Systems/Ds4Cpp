@@ -49,5 +49,18 @@ DS_ABI_EXPORT void __greetdemo__GreetManagerImpl__remove_greetdemo__GreetProvide
 	greetdemo::GreetProvider* lservice = dynamic_cast<greetdemo::GreetProvider*>(service);
 	object->removeGreetProvider(lservice);
 }
+
+DS_ABI_EXPORT void __greetdemo__GreetManagerImpl__set_ds4cpp__ComponentFactory(GreetManagerImplWrapper* object, ::us::Base *service)
+{
+	ds4cpp::ComponentFactory* lservice = dynamic_cast<ds4cpp::ComponentFactory*>(service);
+	object->setComponentFactory(lservice) ;
+}
+
+DS_ABI_EXPORT void __greetdemo__GreetManagerImpl__unset_ds4cpp__ComponentFactory(GreetManagerImplWrapper* object, ::us::Base *service)
+{
+	ds4cpp::ComponentFactory* lservice = dynamic_cast<ds4cpp::ComponentFactory*>(service);
+	object->unsetComponentFactory(lservice) ;
+}
+
 } // extern "C"
 

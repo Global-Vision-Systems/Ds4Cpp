@@ -20,6 +20,7 @@
  */
 #include <iostream>
 #include "ComponentManagerImpl.h"
+#include <usLDAPFilter.h>
 US_USE_NAMESPACE
 namespace ds4cpp
 {
@@ -39,10 +40,8 @@ void ComponentManagerImpl::handleServiceEvent(ServiceEvent event)
 {
     if (event.GetType() == ServiceEvent::REGISTERED)
     {
-        std::list<string> interfaces = any_cast<std::list
-                                                <string
-                                                > >(event.GetServiceReference().GetProperty(
-                                                        ServiceConstants::OBJECTCLASS())) ;
+		// New incoming service 
+        std::list<string> interfaces = any_cast<std::list<string> >(event.GetServiceReference().GetProperty(ServiceConstants::OBJECTCLASS())) ;
         US_INFO << "New Service : " << interfaces ;
 
         // For each objectClass provided by the service object
@@ -50,15 +49,42 @@ void ComponentManagerImpl::handleServiceEvent(ServiceEvent event)
         for (auto objClassIt = interfaces.begin() ;
              objClassIt != interfaces.end() ; ++objClassIt)
         {
-            std::list<Component*>* components = componentReferences[*objClassIt] ;
-            if (components)
+			// Retrieve components that has reference on the incoming service
+            std::list<ComponentInstance*>* ComponentInstances = componentReferences[*objClassIt] ;
+
+			// Valid ?
+            if (ComponentInstances)
             {
-                for (auto compoIt = components->begin() ;
-                     compoIt != components->end() ; ++compoIt)
+                for (auto compoInstIt = ComponentInstances->begin() ;
+                     compoInstIt != ComponentInstances->end() ; ++compoInstIt)
                 {
-                    (*compoIt)->bindService(*objClassIt,
-                                            event.GetServiceReference()) ;
-                    enableIfSatisfied((*compoIt)) ;
+
+					// Find the reference to know if there is a target
+					for (auto referenceIt = (*compoInstIt)->getResolvedReferences().begin();
+						referenceIt != (*compoInstIt)->getResolvedReferences().end(); ++referenceIt)
+					{
+						// Incoming service reference ?
+						if (referenceIt->interface == *objClassIt)
+						{
+							bool bind = true ;
+
+							// Is there a target ?
+							if (!referenceIt->target.empty())
+							{
+								LDAPFilter filter(referenceIt->target) ;
+								bind = filter.Match(event.GetServiceReference()) ;
+							}
+
+							// Filter match ? (or is empty)
+							if (bind)
+							{
+								// Register the incoming service
+								(*compoInstIt)->bindService(*objClassIt, event.GetServiceReference()) ;
+								// Enable the instance ?
+								enableIfSatisfied(*compoInstIt) ;
+							}
+						}
+					}
                 }
             }
         }
@@ -72,73 +98,115 @@ void ComponentManagerImpl::newComponent(Module* module, const ComponentDescripto
 {
     US_DEBUG << "New component descriptor: " << descriptor.componentId
     << " provided by " << module->GetName() ;
-    Component*  component = new Component(module, descriptor) ;
-    this->components.push_back(component) ;     // TODO vector's thread-safety?
-    // update component references map
-    auto        refs = component->descriptor.references ;
-    for (auto it = refs->begin() ; it != refs->end() ; ++it)
-    {
-        if (it->interface.size() == 0)
-        {
-            return ;
-        }
-        std::list<Component*>* components = componentReferences[it->interface] ;
-        if (!components)
-        {
-            components                          = new std::list<Component*> ;
-            componentReferences[it->interface]  = components ;
-        }
-        components->push_back(component) ;
-        US_DEBUG << "Adding " << component->descriptor.componentId
-        << " to references map for service " << it->interface ;
-    }
-    processNewComponent(component) ;
+
+	// Build the component
+	Component *component = new Component(module, descriptor) ;
+	this->components.push_back(component) ;     // TODO vector's thread-safety?
+
+	// Need a factory
+	if (!component->descriptor.singleton)
+	{
+		// Build a factory which will build component when user require it
+		ComponentFactoryImplWrapper *factory = new ComponentFactoryImplWrapper(this, component) ;
+
+		// Build the factory component and register it
+		component = new Component(module, *factory->getFactoryDescriptor()) ;
+		this->components.push_back(component) ;
+
+		// Create factory instance
+		ComponentInstance *factoryInstance = new ComponentInstance(component, *factory->getFactoryDescriptor()->properties) ;
+		factoryInstance->set(reinterpret_cast<us::Base*>(factory)) ;
+		component->factory = true ;
+		component->instances.push_back(factoryInstance) ;
+	}
+	newComponentInstance(component) ;
 }
 
-void ComponentManagerImpl::processNewComponent(Component* component)
+ComponentInstance* ComponentManagerImpl::newComponentInstance(Component *component, const us::ServiceProperties& overrideProperties)
+{
+	ComponentInstance *instance ;
+	if (!component->factory)
+	{
+		// Create an empty instance
+		instance = component->newEmptyComponentInstance(overrideProperties) ;
+	}
+	else
+	{
+		instance = component->instances.at(0) ; // Factory are singleton
+	}
+
+	// Update component references map (for the moment it don't work with factory)
+	auto        refs = instance->getResolvedReferences() ;
+	for (auto it = refs.begin() ; it != refs.end() ; ++it)
+	{
+		if (it->interface.size() == 0)
+		{
+			return 0 ;
+		}
+		std::list<ComponentInstance*>* instances = componentReferences[it->interface] ;
+		if (!instances)
+		{
+			instances                          = new std::list<ComponentInstance*> ;
+			componentReferences[it->interface] = instances ;
+		}
+		instances->push_back(instance) ;
+		US_DEBUG << "Adding " << component->descriptor.componentId
+		<< " to references map for service " << it->interface ;
+	}
+
+	injectAvailableReferencies(instance) ;
+	return instance;
+}
+
+void ComponentManagerImpl::injectAvailableReferencies(ComponentInstance* instance)
 {
     // try to find services already present
-    for (auto it = component->descriptor.references->begin() ;
-         it != component->descriptor.references->end() ; ++it)
+	for (auto it = instance->getResolvedReferences().begin() ;
+         it != instance->getResolvedReferences().end() ; ++it)
     {
-        std::list<ServiceReference> refs = context->GetServiceReferences(
-            it->interface, it->target) ;
+		// Target filter
+		std::list<ServiceReference> refs = context->GetServiceReferences(it->interface, it->target) ;
 
         // take first available
         for (auto it2 = refs.begin(); it2 != refs.end(); ++it2)
         {
-            component->bindService(it->interface, *it2) ;
+            instance->bindService(it->interface, *it2) ;
         }
     }
 
     // test if component is satisfied
-    enableIfSatisfied(component) ;
+    enableIfSatisfied(instance) ;
 }
 
-bool ComponentManagerImpl::isSatisfied(Component* component)
+bool ComponentManagerImpl::enableIfSatisfied(ComponentInstance* instance)
 {
-    return component->isSatisfied() ;
-}
-
-void ComponentManagerImpl::enableIfSatisfied(Component* component)
-{
-    if (isSatisfied(component))
+	Component *component = instance->getComponent() ;
+	if (instance->isSatisfied())
     {
-        if (!component->isActive())
+		// If it is a singleton we can only have one instance
+		if ((component->descriptor.singleton && component->getNumInstance() == 1) || // Because when we create the instance it has been registered
+			 component->factory || !component->descriptor.singleton)
         {
-            instantiateComponent(component) ;
+			return instance->enableInstance() ;
         }
+		else
+		{
+			// TODO: unregister instance
+		}
     }
+	return false ;
 }
 
-ComponentInstance* ComponentManagerImpl::instantiateComponent(Component* component)
-{
-    US_INFO << " Instantiating component" ;
-    ComponentInstance* instance = component->newInstance() ;
+//ComponentInstance* ComponentManagerImpl::instantiateComponent(Component* component, us::ServiceProperties *overrideProperties)
+//{
+//    US_INFO << " Instantiating component" ;
+//    ComponentInstance* instance = component->newInstance(overrideProperties) ;
+//
+//    // instance can be null if newInstance failed
+//    return instance ;
+//}
 
-    // instance can be null if newInstance failed
-    return instance ;
-}
+
 }
 
 /* namespace ds4cpp */

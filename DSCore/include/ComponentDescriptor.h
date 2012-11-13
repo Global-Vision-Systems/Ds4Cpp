@@ -22,24 +22,32 @@
 #define COMPONENTDESCRIPTOR_H_
 #pragma warning( disable: 4251 )
 #pragma warning( disable: 4099 )
+#include <map>
 #include <string>
 #include <vector>
 #include <ostream>
 #include "ComponentReference.h"
+#include "usServiceProperties.h"
 using std::string ;
 using std::vector ;
+using std::map ;
 namespace ds4cpp
 {
 class US_ABI_EXPORT ComponentDescriptor
 {
 public:
-    const string                componentId ;
-    const string                implSharedObject ;
-    const vector<string>*       providedServices ;
+// Properties
+    const string                componentId ;      
+    const string                implSharedObject ; 
+    const vector<string>*       providedServices ; 
     vector<ComponentReference>* references ;
-    const bool                  immediate ;
+	us::ServiceProperties*      properties ;
+    const bool                  immediate ;        
     const bool                  autoEnable ;
-    ComponentDescriptor(const string& componentId, const string& implSharedObject, const vector<string>& providedServices, const vector<ComponentReference>& references, bool immediate = false, bool autoEnable = true) ;
+	bool						singleton ;
+
+//Methods
+	ComponentDescriptor(const string& componentId, const string& implSharedObject, const vector<string>& providedServices, const vector<ComponentReference>& references, const us::ServiceProperties& properties, bool immediate = false, bool autoEnable = true, bool singleton = true) ;
     ComponentDescriptor(const ComponentDescriptor& component) ;
     virtual ~ComponentDescriptor() ;
 

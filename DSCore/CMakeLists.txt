@@ -13,7 +13,8 @@ set(${PROJECT_NAME}_VERSION ${${PROJECT_NAME}_MAJOR_VERSION}.${${PROJECT_NAME}_M
 SET(LIBRARY_OUTPUT_PATH ${BASE_WORK_DIRECTORY}/${OUTPUT_PROJECT_BINARIES_DIRECTORY})
 
 # includes root directory
-include_directories("${PROJECT_BINARY_DIR}")
+include_directories("include/")
+include_directories("service/")
 
 # specific action if CPP_MICRO_SERVICES_DIRECTORY has been set
 if(CPP_MICRO_SERVICES_DIRECTORY)
@@ -27,12 +28,14 @@ endif()
 # get source and include files
 FILE(GLOB CORE_SRCS src/*.cpp)
 FILE(GLOB CORE_HEADERS include/*.h)
+FILE(GLOB CORE_SERVICE_HEADERS service/*.h)
 
 # group them in Folders  
 SOURCE_GROUP("src" FILES ${CORE_SRCS})
 SOURCE_GROUP("include" FILES ${CORE_HEADERS})
+SOURCE_GROUP("service" FILES ${CORE_SERVICE_HEADERS})
  
-add_library(${PROJECT_NAME} SHARED ${CORE_SRCS} ${CORE_HEADERS} )
+add_library(${PROJECT_NAME} SHARED ${CORE_SRCS} ${CORE_HEADERS} ${CORE_SERVICE_HEADERS})
 set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "")
 
 # add the library

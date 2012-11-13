@@ -22,6 +22,7 @@ set(DS4CPP_CORE_NAME "DSCore")
 set(DS4CPP_BRIDGE_NAME "DSBridge")
 set(DS4CPP_LAUNCHER_NAME "DSLauncher")
 set(DS4CPP_DEMO_NAME "DSDemo")
+set(DS4CPP_FACTORY_DEMO_NAME "DSFactoryDemo")
 set(CPP_MICRO_SERVICES_NAME "CppMicroServices") 
 
 #set default value for DS4CPP directory. If not valid, ask for it
@@ -92,6 +93,7 @@ add_subdirectory("${BASE_WORK_DIRECTORY}/${DS4CPP_BRIDGE_NAME}")
 OPTION(USE_GREET_DEMO "Add greet demo project")
 IF( USE_GREET_DEMO )
 	add_subdirectory("${BASE_WORK_DIRECTORY}/${DS4CPP_DEMO_NAME}")
+	add_subdirectory("${BASE_WORK_DIRECTORY}/${DS4CPP_FACTORY_DEMO_NAME}")
 ENDIF()
 
 #add launcher (if required by user)

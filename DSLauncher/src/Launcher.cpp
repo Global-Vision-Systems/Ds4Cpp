@@ -86,7 +86,7 @@ ModuleLoader* loadModule(const char* moduleName, int* cptLoadedModules)
     }
     catch (std::runtime_error& error)
     {
-        cerr << error.what() << endl ;
+		US_ERROR << error.what() ;
     }
 
     return NULL ;
@@ -96,6 +96,29 @@ ModuleLoader* loadModule(const char* moduleName, int* cptLoadedModules)
 void printSeparator()
 {
     cout << SEPARATOR << endl ;
+}
+
+std::string selectDemo()
+{
+	bool valid = false ;
+	while (!valid)
+	{
+		cout << "which demo do you want to use ? (default DSDemo) " << std::endl << "1. DSDemo" << std::endl << "2. DSFactoryDemo" << std::endl ;
+		std::string choice ;
+		cin >> choice ;
+		if (choice.empty())
+		{
+			return "DSDemo" ;
+		}
+		if (std::isdigit(choice.c_str()[0]))
+		{
+			int num = atoi(choice.c_str()) ;
+			if (num == 1)
+				return "DSDemo" ;
+			else if (num == 2)
+				return "DSFactoryDemo" ;
+		}
+	}
 }
 
 int main(int /*argc*/, char* /*argv*/ [])
@@ -109,9 +132,15 @@ int main(int /*argc*/, char* /*argv*/ [])
 
         // Loading modules
         // loadModule("SimpleModule", &cptLoadedModules);
-        loadModule("DSCore", &cptLoadedModules) ;
-        loadModule("DSBridge", &cptLoadedModules) ;
-        loadModule("DSDemo", &cptLoadedModules) ;
+		std::string debugFlag = "";
+#ifdef _DEBUG
+		debugFlag = "d" ;
+#endif
+		std::string demoModule = selectDemo() ;
+
+		loadModule(std::string(std::string("DSCore") + debugFlag).c_str(), &cptLoadedModules) ;
+		loadModule(std::string(std::string("DSBridge") + debugFlag).c_str(), &cptLoadedModules) ;
+		loadModule(std::string(demoModule + debugFlag).c_str(), &cptLoadedModules) ;
         vector<Module*> modules ;
         ModuleRegistry::GetLoadedModules(modules) ;
         cout << cptLoadedModules << " modules have been loaded" << endl ;
