@@ -21,7 +21,7 @@
 #ifndef COMPONENTFACTORYIMPL_H_
 #define COMPONENTFACTORYIMPL_H_
 
-#include "ComponentFactory.h"
+#include "ds4cpp/ComponentFactory.hpp"
 #include "ComponentInstance.h"
 #include "ComponentDescriptor.h"
 

@@ -18,7 +18,7 @@
  *  Created on: 11 mai 2012
  *      Author: simon
  */
-#include "ComponentManager.h"
+#include "ds4cpp/ComponentManager.hpp"
 #include "ComponentManagerImpl.h"
 #include <usModuleActivator.h>
 #include <usModuleContext.h>

@@ -29,7 +29,7 @@
 #include "Component.h"
 #include "ComponentDescriptor.h"
 #include "ComponentInstance.h"
-#include "ComponentManager.h"
+#include "ds4cpp/ComponentManager.hpp"
 US_USE_NAMESPACE
 namespace ds4cpp
 {

@@ -26,7 +26,7 @@
 #include <map>
 #include <greetdemo/GreetProvider.hpp>
 #include <greetdemo/GreetManager.hpp>
-#include <ComponentFactory.h>
+#include <ds4cpp/ComponentFactory.hpp>
 
 namespace greetdemo {
 

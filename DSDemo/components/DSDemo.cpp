@@ -16,7 +16,7 @@
  * Module definition for DSDemo
  */
 #include <ComponentProvider.h>
-#include <ComponentFactory.h>
+#include <ds4cpp/ComponentFactory.hpp>
 
 #include <usModuleActivator.h>
 #include <usModuleContext.h>

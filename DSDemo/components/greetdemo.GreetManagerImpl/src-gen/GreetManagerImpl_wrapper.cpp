@@ -19,7 +19,7 @@
 #include "greetdemo.GreetManagerImpl/include/GreetManagerImpl.hpp"
 #include <usBase.h>
 #include <ServiceUtils.h>
-#include "ComponentFactory.h"
+#include "ds4cpp/ComponentFactory.hpp"
 #include <iostream>
 
 class GreetManagerImplWrapper: public ::us::Base, public greetdemo::GreetManagerImpl
