@@ -17,7 +17,7 @@ SET(LIBRARY_OUTPUT_PATH ${BASE_WORK_DIRECTORY}/${OUTPUT_PROJECT_BINARIES_DIRECTO
 #find Core and CppMicroServices and ComponentDescriptorBridge to link with
 if(BASE_WORK_DIRECTORY AND BUILD_TYPE_OUTPUT_DIR)
 	#include Core and ComponentDescriptorBridge
-	include_directories ("${BASE_WORK_DIRECTORY}/${DS4CPP_CORE_NAME}/service/")
+	include_directories ("${BASE_WORK_DIRECTORY}/${DS4CPP_CORE_NAME}/services/")
 	include_directories ("${BASE_WORK_DIRECTORY}/${DS4CPP_CORE_NAME}/include/")
 	include_directories ("${BASE_WORK_DIRECTORY}/${DS4CPP_BRIDGE_NAME}/include")
 	link_directories(${BASE_WORK_DIRECTORY}/${OUTPUT_PROJECT_BINARIES_DIRECTORY}/${BUILD_TYPE})

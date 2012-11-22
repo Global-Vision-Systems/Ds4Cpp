@@ -19,7 +19,7 @@ SET(LIBRARY_OUTPUT_PATH ${BASE_WORK_DIRECTORY}/${OUTPUT_PROJECT_BINARIES_DIRECTO
 
 if(BASE_WORK_DIRECTORY)
 	#include Core 
-	include_directories ("${BASE_WORK_DIRECTORY}/${DS4CPP_CORE_NAME}/service/")
+	include_directories ("${BASE_WORK_DIRECTORY}/${DS4CPP_CORE_NAME}/services/")
 	include_directories ("${BASE_WORK_DIRECTORY}/${DS4CPP_CORE_NAME}/include/")
 	link_directories(${BASE_WORK_DIRECTORY}/${OUTPUT_PROJECT_BINARIES_DIRECTORY}/${BUILD_TYPE})
 else()

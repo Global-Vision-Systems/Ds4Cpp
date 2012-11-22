@@ -14,7 +14,7 @@ SET(LIBRARY_OUTPUT_PATH ${BASE_WORK_DIRECTORY}/${OUTPUT_PROJECT_BINARIES_DIRECTO
 
 # includes root directory
 include_directories("include/")
-include_directories("service/")
+include_directories("services/")
 
 # specific action if CPP_MICRO_SERVICES_DIRECTORY has been set
 if(CPP_MICRO_SERVICES_DIRECTORY)
@@ -28,7 +28,7 @@ endif()
 # get source and include files
 FILE(GLOB CORE_SRCS src/*.cpp)
 FILE(GLOB CORE_HEADERS include/*.h)
-FILE(GLOB CORE_SERVICE_HEADERS service/*.h)
+FILE(GLOB CORE_SERVICE_HEADERS services/*.h)
 
 # group them in Folders  
 SOURCE_GROUP("src" FILES ${CORE_SRCS})
