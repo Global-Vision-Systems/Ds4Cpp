@@ -85,9 +85,15 @@ public:
 	const ::us::ServiceProperties&         getProperties() const ;
 	const ::us::ServiceProperties&         getComponentParameters() const ;
 	const std::vector<ComponentReference>& getResolvedReferences() const ;
+	/**
+	 * Retrieve created instance ptr
+	 */
 	US_ABI_EXPORT us::Base*                getInstance() const ;
 
 	void set(::us::Base *instance) ;
+	/**
+	 * Unregister the current componentinstance
+	 */
 	void unregister() ;
 
 	bool isValid() const ;

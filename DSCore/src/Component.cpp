@@ -27,7 +27,7 @@ namespace ds4cpp {
 // Static functions
 static std::string getCreateMethodName(const ComponentDescriptor& desc);
 static std::string getBindServiceMethodName(const ComponentDescriptor& descriptor, const std::string& serviceName, const std::string& refName, ComponentReference::Cardinality cardinality, bool add = true) ;
-static std::string getActivateMethodName(const ComponentDescriptor&);
+static std::string getActivateMethodName(const ComponentDescriptor&, bool activate = true);
 
 ds4cpp::Component::Component(const us::Module* module, const ComponentDescriptor& descriptor) :
 		module(module), descriptor(descriptor), handle(0), factory(false) 
@@ -94,6 +94,16 @@ void Component::callActivate(ComponentInstance* instance)
 
 	// Call activate method on module
 	this->handle->callActivate(activateMethodName, instance->instanceObject, instance->getProperties());
+}
+
+void Component::callDeactivate(ComponentInstance* instance) 
+{
+	// Retrieve activate method name
+	std::string activateMethodName = getActivateMethodName(descriptor, false);
+	US_DEBUG << "Trying to call deactivate";
+
+	// Call activate method on module
+	this->handle->callDeactivate(activateMethodName, instance->instanceObject);
 }
 
 void Component::callBind(ComponentInstance* componentInstance, const us::ServiceReference& SvcReference, const std::string& interfaceName, const std::string& refName, ComponentReference::Cardinality cardinality)
@@ -189,7 +199,7 @@ static std::string getCreateMethodName(const ComponentDescriptor& descriptor)
 	return create_method_name;
 }
 
-static std::string getActivateMethodName(const ComponentDescriptor& descriptor) 
+static std::string getActivateMethodName(const ComponentDescriptor& descriptor, bool activate) 
 {
 	string activate_method_name = "__";
 	for (unsigned int i = 0; i < descriptor.componentId.size(); i++) 
@@ -201,7 +211,10 @@ static std::string getActivateMethodName(const ComponentDescriptor& descriptor)
 		}
 		activate_method_name.append(1, c);
 	}
-	activate_method_name.append("__activate");
+	if (activate)
+		activate_method_name.append("__activate");
+	else
+		activate_method_name.append("__deactivate");		
 	return activate_method_name;
 }
 

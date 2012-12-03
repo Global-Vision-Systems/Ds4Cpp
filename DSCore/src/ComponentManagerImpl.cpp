@@ -26,14 +26,12 @@ namespace ds4cpp
 {
 ComponentManagerImpl::ComponentManagerImpl(ModuleContext* context) : context(context), components(*new vector<Component*>())
 {
-    context->AddServiceListener(this,
-                                &ComponentManagerImpl::handleServiceEvent) ;
+    context->AddServiceListener(this, &ComponentManagerImpl::handleServiceEvent) ;
 }
 
 ComponentManagerImpl::~ComponentManagerImpl()
 {
-    context->RemoveServiceListener(this,
-                                   &ComponentManagerImpl::handleServiceEvent) ;
+    context->RemoveServiceListener(this, &ComponentManagerImpl::handleServiceEvent) ;
 }
 
 std::list<ComponentInstance*> ComponentManagerImpl::getInstanceListeningService(const std::string& service, const us::ServiceReference& ref)
@@ -49,7 +47,6 @@ std::list<ComponentInstance*> ComponentManagerImpl::getInstanceListeningService(
         for (auto compoInstIt = ComponentInstances->begin() ;
                 compoInstIt != ComponentInstances->end() ; ++compoInstIt)
         {
-
 			// Find the reference to know if there is a target
 			for (auto referenceIt = (*compoInstIt)->getResolvedReferences().begin();
 				referenceIt != (*compoInstIt)->getResolvedReferences().end(); ++referenceIt)
@@ -57,33 +54,27 @@ std::list<ComponentInstance*> ComponentManagerImpl::getInstanceListeningService(
 				// Is it the good reference ?
 				if (referenceIt->interface == service)
 				{
-					// Check if the cardinality is multiple
-					// Or if it is single if there isn't already a reference on a service
-					if (referenceIt->cardinality == ComponentReference::MULTIPLE || 
-						(referenceIt->cardinality == ComponentReference::SINGLE && (*compoInstIt)->serviceReferences.count(referenceIt->interface) == 0))
+					bool bind = true ;
+
+					// Is there a target ?
+					if (!referenceIt->target.empty())
 					{
-						bool bind = true ;
-
-						// Is there a target ?
-						if (!referenceIt->target.empty())
+						try
 						{
-							try
-							{
-								LDAPFilter filter(referenceIt->target) ;
-								bind = filter.Match(ref) ;
-							}
-							catch (std::exception e)
-							{
-								US_ERROR << "Error on LDAP filter : " << e.what() ;
-								bind = false ;
-							}
+							LDAPFilter filter(referenceIt->target) ;
+							bind = filter.Match(ref) ;
 						}
-
-						// Filter match ? (or is empty)
-						if (bind)
+						catch (std::exception e)
 						{
-							listeningInstancies.push_back(*compoInstIt) ;
+							US_ERROR << "Error on LDAP filter : " << e.what() ;
+							bind = false ;
 						}
+					}
+
+					// Filter match ? (or is empty)
+					if (bind)
+					{
+						listeningInstancies.push_back(*compoInstIt) ;
 					}
 				}
 			}
@@ -147,27 +138,38 @@ void ComponentManagerImpl::referenceHasLeft(ComponentInstance *instance, const s
 				if (providingInstance.size() != 0)
 				{
 					ComponentInstance *replacingOne = providingInstance.front() ;
-					us::ServiceReference ref = replacingOne->providedServiceRegistration[interface].GetReference() ;
+					std::map<std::string, us::ServiceRegistration>::iterator it = replacingOne->providedServiceRegistration.find(interface) ;
+					if (it == replacingOne->providedServiceRegistration.end())
+					{
+						// It should never happen
+						US_ERROR << "Internal error, please notify ds4cpp on github" ;
+						return ;
+					}
+					us::ServiceReference replaceOneRef = it->second.GetReference() ;
 
-					// New one
-					instance->bindService(interface, refsIt->name, ref) ;
-					// leaving
+					// We want the component be able to live during the replacing of the interface, so we call bind before unbind
+					instance->bindService(interface, refsIt->name, replaceOneRef) ;
 					instance->unbindService(interface, refsIt->name, ref) ;
 				}
 				else
-				{
-					if (refsIt->type == ComponentReference::MANDATORY_REF)
+				{ // cardinality = multiple
+
+					if (refsIt->type == ComponentReference::MANDATORY_REF && instance->serviceReferences.count(interface) == 1)
 					{
 						// Dead...
 						instance->unregister() ;
 						return ;
 					}
-					// It is not a mandatory reference we can let the instance living
-					return ;
+					else
+					{
+						// It remains several interface of the service or it is not a mandatory service we can let the component living
+						instance->unbindService(interface, refsIt->name, ref) ;
+					}
 				}
 			}
 			else
 			{
+				// Multiple cardinality, if the instance is unsatisfied it will be managed by the ComponentInstance himself
 				instance->unbindService(interface, refsIt->name, ref) ;
 			}
 
@@ -188,18 +190,23 @@ void ComponentManagerImpl::handleServiceEvent(ServiceEvent event)
         for (auto objClassIt = interfaces.begin() ; objClassIt != interfaces.end() ; ++objClassIt)
         {
 			// Retrieve the list of service that are listening to this leaving service
-			auto listeningServices = getInstanceListeningService(*objClassIt, event.GetServiceReference()) ;
-			for (auto lsIt = listeningServices.begin(); lsIt != listeningServices.end(); ++lsIt)
+			auto listeningComponents = getInstanceListeningService(*objClassIt, event.GetServiceReference()) ;
+			for (auto lsIt = listeningComponents.begin(); lsIt != listeningComponents.end(); ++lsIt)
 			{
-
 				for (auto refsIt = (*lsIt)->getResolvedReferences().begin(); refsIt != (*lsIt)->getResolvedReferences().end(); ++refsIt)
 				{
 					if (refsIt->interface == *objClassIt)
-					{					
-						// Register the incoming service
-						(*lsIt)->bindService(*objClassIt, refsIt->name, event.GetServiceReference()) ;
-						// Enable the instance ?
-						enableIfSatisfied(*lsIt) ;
+					{
+						// Check if the cardinality is multiple
+						// Or if it is single if there isn't already a reference on a service
+						if (refsIt->cardinality == ComponentReference::MULTIPLE || 
+							(refsIt->cardinality == ComponentReference::SINGLE && (*lsIt)->serviceReferences.count(refsIt->interface) == 0))
+						{
+							// Register the incoming service
+							(*lsIt)->bindService(*objClassIt, refsIt->name, event.GetServiceReference()) ;
+							// Enable the instance ?
+							enableIfSatisfied(*lsIt) ;
+						}
 					}
 				}
 			}
@@ -286,8 +293,7 @@ ComponentInstance* ComponentManagerImpl::newComponentInstance(Component *compone
 			componentReferences[it->interface] = instances ;
 		}
 		instances->push_back(instance) ;
-		US_DEBUG << "Adding " << component->descriptor.componentId
-		<< " to references map for service " << it->interface ;
+		US_DEBUG << "Adding " << component->descriptor.componentId << " to references map for service " << it->interface ;
 	}
 
 	injectAvailableReferencies(instance) ;
@@ -332,17 +338,6 @@ bool ComponentManagerImpl::enableIfSatisfied(ComponentInstance* instance)
     }
 	return false ;
 }
-
-//ComponentInstance* ComponentManagerImpl::instantiateComponent(Component* component, us::ServiceProperties *overrideProperties)
-//{
-//    US_INFO << " Instantiating component" ;
-//    ComponentInstance* instance = component->newInstance(overrideProperties) ;
-//
-//    // instance can be null if newInstance failed
-//    return instance ;
-//}
-
-
 }
 
 /* namespace ds4cpp */

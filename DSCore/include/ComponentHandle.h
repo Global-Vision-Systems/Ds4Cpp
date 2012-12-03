@@ -64,7 +64,9 @@ public:
 
     void callActivate(const std::string& methodName, void* instance, const ::us::ServiceProperties& param) ;
 
-    void unload() ;
+    void callDeactivate(const std::string& methodName, void* instance) ;
+
+	void unload() ;
 
 } ;
 

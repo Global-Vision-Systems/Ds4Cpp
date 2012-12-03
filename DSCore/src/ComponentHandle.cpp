@@ -181,4 +181,37 @@ void ComponentHandle::callActivate(const std::string& methodName, void* instance
     }
 }
 
+void ComponentHandle::callDeactivate(const std::string& methodName, void* instance)
+{
+	// Typedefs
+	typedef void (* Deactivate)(void*) ;
+
+	// Method
+    Deactivate funDeactivateMethod = NULL;
+#ifdef US_PLATFORM_POSIX
+    funDeactivateMethod = (Deactivate) dlsym(osHandle, methodName.c_str()) ;
+    if (!funDeactivateMethod)
+    {
+        const char* err = dlerror() ;
+
+        // fail silently if activate isn't here!
+        US_DEBUG << name << ": Couldn't find deactivate method" ;
+    }
+#else
+    funDeactivateMethod = (Deactivate) ::GetProcAddress((HMODULE)osHandle, methodName.c_str()) ;
+    if (!funDeactivateMethod)
+    {
+        std::string             errMsg = "callDeactivate " ;
+        std::ostringstream      oss ;
+        oss << GetLastError() ;
+        errMsg.append(methodName).append("failed with error: ").append(oss.str()) ;
+
+        // fail silently if activate isn't here!
+        US_DEBUG << name << " " << errMsg ;
+		return ;
+    }
+#endif
+    funDeactivateMethod(instance) ;
+}
+
 }

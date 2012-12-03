@@ -279,6 +279,7 @@ bool ComponentInstance::isSatisfied() const
 void ComponentInstance::unregister()
 {
 	component->unpublishServices(this) ;
+	component->callDeactivate(this) ;
 }
 
 std::string ComponentInstance::replaceVariableInTarget(std::string target)

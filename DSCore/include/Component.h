@@ -41,10 +41,10 @@ class US_ABI_EXPORT Component
 	friend class ComponentInstance ;
 	friend class ComponentManagerImpl ;
 private:
-	bool                                                factory ;
-    std::vector<ComponentInstance*>                     instances ;
-    ComponentHandle*                                    handle ;
-    const us::Module*                                   module ;
+	bool                                                factory ;   /**< Is it a factory ? */
+    std::vector<ComponentInstance*>                     instances ; /**< List of the ComponentInstance */
+    ComponentHandle*                                    handle ;    /**< wrapper handler */
+    const us::Module*                                   module ;    /**< CppMicroService module */
 
 
     ComponentHandle* getHandle() ;
@@ -57,6 +57,10 @@ private:
 	 * Call create activate on wrapper
 	 */
 	void callActivate(ComponentInstance *componentInstance) ;
+	/**
+	 * Call create deactivate on wrapper
+	 */
+	void callDeactivate(ComponentInstance *componentInstance) ;
 	/**
 	 * Call create bind (set|add) on wrapper
 	 */
@@ -79,7 +83,7 @@ private:
     virtual ~Component() ;
 
 public:
-    const ComponentDescriptor descriptor ;
+    const ComponentDescriptor descriptor ; /**< Associated descriptor */
 
 	/** Create an empty Component instance */
 	ComponentInstance* newEmptyComponentInstance(const us::ServiceProperties& overrideProperties, const us::ServiceProperties& componentParameters) ;

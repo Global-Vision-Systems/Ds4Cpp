@@ -37,14 +37,14 @@ class US_ABI_EXPORT ComponentDescriptor
 {
 public:
 // Properties
-    const string                componentId ;      
-    const string                implSharedObject ; 
-    const vector<string>*       providedServices ; 
-    vector<ComponentReference>* references ;
-	us::ServiceProperties*      properties ;
-    const bool                  immediate ;        
-    const bool                  autoEnable ;
-	bool						singleton ;
+    const string                componentId ;      /**< Component identifier */
+    const string                implSharedObject ; /**< Name of the handling module */
+    const vector<string>*       providedServices ; /**< List of the provided services */
+    vector<ComponentReference>* references ;       /**< List of the reference services */
+	us::ServiceProperties*      properties ;       /**< Base component properties with unresolved variables */
+    const bool                  immediate ;        /**< */
+    const bool                  autoEnable ;       /**< */
+	bool						singleton ;        /**< Is it a singleton or a factory ? */
 
 //Methods
 	ComponentDescriptor(const string& componentId, const string& implSharedObject, const vector<string>& providedServices, const vector<ComponentReference>& references, const us::ServiceProperties& properties, bool immediate = false, bool autoEnable = true, bool singleton = true) ;
