@@ -23,7 +23,7 @@
 
 #include <greetdemo/GreetProvider.hpp>
 #include <string>
-#include <map>
+#include <usServiceProperties.h>
 
 namespace greetdemo {
 
@@ -34,14 +34,14 @@ private:
 	std::string _lang ;
 
 public:
-    GenericGreetProvider();
+	GenericGreetProvider(const us::ServiceProperties& parameters);
     virtual ~GenericGreetProvider();
 
 
     /**
      * Activate callback, called when the component is activated.
      */
-    void activate(const std::map<std::string, std::string>& parameter);
+    void activate(const us::ServiceProperties& properties);
 
 
     std::string getDefaultTarget() const ;

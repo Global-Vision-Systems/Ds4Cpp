@@ -28,14 +28,14 @@ endif()
 # get source and include files
 FILE(GLOB CORE_SRCS src/*.cpp)
 FILE(GLOB CORE_HEADERS include/*.h)
-FILE(GLOB CORE_SERVICE_HEADERS services/*.h)
+FILE(GLOB CORE_SERVICES_DS4CPP_HEADERS services/ds4cpp/*.hpp)
 
 # group them in Folders  
 SOURCE_GROUP("src" FILES ${CORE_SRCS})
 SOURCE_GROUP("include" FILES ${CORE_HEADERS})
-SOURCE_GROUP("service" FILES ${CORE_SERVICE_HEADERS})
+SOURCE_GROUP("services\\ds4cpp" FILES ${CORE_SERVICES_DS4CPP_HEADERS})
  
-add_library(${PROJECT_NAME} SHARED ${CORE_SRCS} ${CORE_HEADERS} ${CORE_SERVICE_HEADERS})
+add_library(${PROJECT_NAME} SHARED ${CORE_SRCS} ${CORE_HEADERS} ${CORE_SERVICES_DS4CPP_HEADERS})
 set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "")
 
 # add the library

@@ -66,6 +66,8 @@ public:
 
     std::list<std::string> getAvailableLanguages() const ;
 
+	void reset() ;
+
 };
 
 } // namespace greetdemo

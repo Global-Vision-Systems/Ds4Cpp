@@ -49,11 +49,31 @@ private:
 
     ComponentHandle* getHandle() ;
     
+	/**
+	 * Call create function on wrapper
+	 */
 	void *callCreate(ComponentInstance *componentInstance) ;
+	/**
+	 * Call create activate on wrapper
+	 */
 	void callActivate(ComponentInstance *componentInstance) ;
-	void callBind(ComponentInstance* componentInstance, const us::ServiceReference& SvcReference, const std::string& interfaceName, ComponentReference::Cardinality cardinality) ;
+	/**
+	 * Call create bind (set|add) on wrapper
+	 */
+	void callBind(ComponentInstance* componentInstance, const us::ServiceReference& SvcReference, const std::string& interfaceName, const std::string& refName, ComponentReference::Cardinality cardinality) ;
+	/**
+	 * Call create unbind (unset|remove) on wrapper
+	 */
+	void callUnbind(ComponentInstance* componentInstance, const us::ServiceReference& SvcReference, const std::string& interfaceName, const std::string& refName, ComponentReference::Cardinality cardinality) ;
 
+	/**
+	 * Publish a service
+	 */
 	void publishServices(ComponentInstance* componentInstance) ;
+	/**
+	 * Unpublish a service
+	 */
+	void unpublishServices(ComponentInstance* componentInstance) ;
 
     Component(const us::Module* module, const ComponentDescriptor& descriptor) ;
     virtual ~Component() ;
@@ -62,7 +82,7 @@ public:
     const ComponentDescriptor descriptor ;
 
 	/** Create an empty Component instance */
-	ComponentInstance* newEmptyComponentInstance(const us::ServiceProperties& overrideProperties) ;
+	ComponentInstance* newEmptyComponentInstance(const us::ServiceProperties& overrideProperties, const us::ServiceProperties& componentParameters) ;
 
 	int getNumInstance() const ;
 } ;

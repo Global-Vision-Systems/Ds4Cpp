@@ -32,10 +32,10 @@ ConsoleGreeter::~ConsoleGreeter() {
 
 void greetdemo::ConsoleGreeter::activate()
 {
-    std::cout << "#################################################"
-    << std::endl ;
-    std::cout << "########## Welcome to CONSOLE GREETER ###########"
-    << std::endl ;
+
+	// First part
+    std::cout << "#################################################" << std::endl ;
+    std::cout << "########## Welcome to CONSOLE GREETER ###########" << std::endl ;
     std::list<std::string>      greetings = this->greetManager->getAllGreetings(
         "GVS") ;
     for (auto it = greetings.begin() ; it != greetings.end() ; ++it)
@@ -47,8 +47,25 @@ void greetdemo::ConsoleGreeter::activate()
     {
         std::cout << greetManager->getGreeting(*it, greetManager->getDefaultTarget(*it)) << std::endl ;
     }
-    std::cout << "#################################################"
-    << std::endl ;
+    std::cout << "#################################################" << std::endl ;
+
+	// Delete factory
+    std::cout << "#################################################" << std::endl ;
+    std::cout << "########## Delete greetProviders      ###########" << std::endl ;
+	greetManager->reset() ;
+
+	// second part
+    greetings = this->greetManager->getAllGreetings("GVS") ;
+    for (auto it = greetings.begin() ; it != greetings.end() ; ++it)
+    {
+        std::cout << *it << std::endl ;
+    }
+    languages = this->greetManager->getAvailableLanguages() ;
+    for (auto it = languages.begin() ; it != languages.end() ; ++it)
+    {
+        std::cout << greetManager->getGreeting(*it, greetManager->getDefaultTarget(*it)) << std::endl ;
+    }
+    std::cout << "#################################################" << std::endl ;
 }
 
 /*

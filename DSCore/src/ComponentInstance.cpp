@@ -24,10 +24,11 @@
 // using namespace std;
 namespace ds4cpp
 {
-ComponentInstance::ComponentInstance(Component *component, const us::ServiceProperties& overrideProperties) : 
+ComponentInstance::ComponentInstance(Component *component, const us::ServiceProperties& overrideProperties, const us::ServiceProperties& componentParameters) : 
 component(component),
 instanceObject(NULL),
-satisfied(false)
+satisfied(false),
+componentParameters(componentParameters)
 {
 	// Merge descriptor properties with override
 	properties = *component->descriptor.properties ;
@@ -57,9 +58,19 @@ ComponentInstance::~ComponentInstance()
 	}
 }
 
+::us::Base* ComponentInstance::getInstance() const
+{
+	return instanceObject ;
+}
+
 Component* ComponentInstance::getComponent() const
 {
 	return component ;
+}
+
+const ::us::ServiceProperties& ComponentInstance::getComponentParameters() const
+{
+	return componentParameters ;
 }
 
 const ::us::ServiceProperties& ComponentInstance::getProperties() const
@@ -82,7 +93,7 @@ bool ComponentInstance::isValid() const
 	return instanceObject != NULL ;
 }
 
-void ComponentInstance::bindService(const std::string& interface, us::ServiceReference serviceReference) 
+void ComponentInstance::bindService(const std::string& interface, const std::string& refName, us::ServiceReference serviceReference) 
 {
 	US_DEBUG << "Component " << component->descriptor.componentId << " was supplied a service providing interface " << interface ;
 
@@ -94,12 +105,15 @@ void ComponentInstance::bindService(const std::string& interface, us::ServiceRef
 
 	if (isValid()) 
 	{
-		injectReference(interface, serviceReference);
+		injectReference(interface, refName, serviceReference);
 	}
 }
 
-void ComponentInstance::unbindService(const std::string& interface, us::ServiceReference serviceReference) 
+void ComponentInstance::unbindService(const std::string& interface, const std::string& refName, us::ServiceReference serviceReference) 
 {
+	bool wasValid = isValid() ;
+
+	// Remove outcoming service
 	for (auto it = serviceReferences.begin(); it != serviceReferences.end(); ++it) 
 	{
 		if (it->first == interface && it->second == serviceReference) 
@@ -108,7 +122,19 @@ void ComponentInstance::unbindService(const std::string& interface, us::ServiceR
 			break;
 		}
 	}
+
+	// Check if this component is sill satified
 	computeSatisfied();
+
+	if (wasValid && !isValid())
+	{
+		// Unpublish this component
+		this->unregister() ;
+	}
+	else
+	{
+		uninjectReference(interface, refName, serviceReference) ;
+	}
 }
 
 void ComponentInstance::computeSatisfied() 
@@ -195,7 +221,7 @@ void ComponentInstance::injectAllReferences()
 			}
 
 			// Call bind function on the module
-			component->callBind(this, it2->second, it->interface, it->cardinality) ; 
+			component->callBind(this, it2->second, it->interface, it->name, it->cardinality) ; 
 
 			if (it->cardinality == ComponentReference::SINGLE) 
 			{
@@ -205,7 +231,7 @@ void ComponentInstance::injectAllReferences()
 	}
 }
 
-void ComponentInstance::injectReference(const std::string& interface, us::ServiceReference ref) 
+void ComponentInstance::injectReference(const std::string& interface, const std::string& refName, us::ServiceReference ref) 
 {
 	// Find cardinality and target
 	ComponentReference::Cardinality cardinality = ComponentReference::SINGLE;
@@ -222,12 +248,37 @@ void ComponentInstance::injectReference(const std::string& interface, us::Servic
 	}
 
 	// call bind method
-	component->callBind(this, ref, interface, cardinality) ;
+	component->callBind(this, ref, interface, refName, cardinality) ;
+}
+
+void ComponentInstance::uninjectReference(const std::string& interface, const std::string& refName, us::ServiceReference ref) 
+{
+	// Find cardinality and target
+	ComponentReference::Cardinality cardinality = ComponentReference::SINGLE;
+
+	// Look for the require interface to know the cardinality
+	for (auto it = resolvedReferences.begin();
+			it != resolvedReferences.end(); ++it) 
+	{
+		if (it->interface == interface) 
+		{
+			cardinality = it->cardinality;
+			break;
+		}
+	}
+
+	// call unbind method
+	component->callUnbind(this, ref, interface, refName, cardinality) ;
 }
 
 bool ComponentInstance::isSatisfied() const 
 {
 	return this->satisfied;
+}
+
+void ComponentInstance::unregister()
+{
+	component->unpublishServices(this) ;
 }
 
 std::string ComponentInstance::replaceVariableInTarget(std::string target)

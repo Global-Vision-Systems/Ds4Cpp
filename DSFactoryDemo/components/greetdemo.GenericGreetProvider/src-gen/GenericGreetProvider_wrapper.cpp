@@ -1,41 +1,37 @@
-//   Copyright 2012 - Global Vision Systems
-//
-//   Licensed under the Apache License, Version 2.0 (the "License");
-//   you may not use this file except in compliance with the License.
-//   You may obtain a copy of the License at
-//
-//       http://www.apache.org/licenses/LICENSE-2.0
-//
-//   Unless required by applicable law or agreed to in writing, software
-//   distributed under the License is distributed on an "AS IS" BASIS,
-//   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//   See the License for the specific language governing permissions and
-//   limitations under the License.
-
 /*
- * EnglishGreetProviderWrapper.cpp
- * Wrapper for greetdemo.EnglishGreetProvider
+ * GenericGreetProviderWrapper.cpp
+ * Wrapper for greetdemo.GenericGreetProvider
  */
 #include "greetdemo.GenericGreetProvider/include/GenericGreetProvider.hpp"
-#include <map>
-#include <string>
 #include <usBase.h>
 #include <ServiceUtils.h>
 
+#include <usServiceProperties.h>
+
+/**
+ * @class GenericGreetProviderWrapper
+ * The wrapper class for component greetdemo::GenericGreetProvider
+ * (provides inheritance with a generic base class for typing purposes)
+ */
 class GenericGreetProviderWrapper: public ::us::Base, public greetdemo::GenericGreetProvider
 {
+    public:
+    GenericGreetProviderWrapper(const us::ServiceProperties& parameters) : greetdemo::GenericGreetProvider(parameters)
+    {
+    }    
 };
 
 extern "C"
 {
-DS_ABI_EXPORT GenericGreetProviderWrapper* __greetdemo__GenericGreetProvider__create()
+
+DS_ABI_EXPORT GenericGreetProviderWrapper* __greetdemo__GenericGreetProvider__create_param(const us::ServiceProperties& parameters)
 {
-	return new GenericGreetProviderWrapper;
+    return new GenericGreetProviderWrapper(parameters);
 }
 
-DS_ABI_EXPORT void __greetdemo__GenericGreetProvider__activate_param(GenericGreetProviderWrapper* object, const std::map<std::string, std::string>& param)
+DS_ABI_EXPORT void __greetdemo__GenericGreetProvider__activate_param(GenericGreetProviderWrapper* object,  const us::ServiceProperties& properties)
 {
-	object->activate(param);
+    object->activate(properties);
 }
 
 

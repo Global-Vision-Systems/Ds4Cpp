@@ -24,15 +24,42 @@
 #include "usServiceProperties.h"
 #include <ComponentInstance.h>
 
-#define DS4CPP_FACTORY_SERVICE_NAME    std::string("ds4cpp::ComponentFactory")
-#define DS4CPP_FACTORY_COMPONENT_NAME  std::string("component.name")
+#define DS4CPP_FACTORY_SERVICE_NAME           std::string("ds4cpp::ComponentFactory")
+#define DS4CPP_FACTORY_COMPONENT_NAME         std::string("component.name")
+#define DS4CPP_FACTORY_PROVIDED_SERVICE_NAME  std::string("component.services")
 
 namespace ds4cpp
 {
 class ComponentFactory
 {
 public:
-	virtual ComponentInstance *  create(const ::us::ServiceProperties& prop) = 0 ;
+	virtual const us::ServiceProperties& getFactoryProperties() const = 0 ;
+
+	std::vector<std::string> getComponentProvidedServices() const
+	{
+		return us::any_cast<std::vector<std::string> >(getFactoryProperties().at(DS4CPP_FACTORY_PROVIDED_SERVICE_NAME))  ;
+	}
+
+	std::string getComponentName() const
+	{
+		return us::any_cast<std::string>(getFactoryProperties().at(DS4CPP_FACTORY_COMPONENT_NAME)) ;
+	}
+
+	/**
+	 * Create a new instancy
+	 * @param[in] serviceProperties provided service properties
+	 * @param[in] componentParameters component parameters that will be given to the constructor
+	 */
+	virtual ComponentInstance *          create(const ::us::ServiceProperties& serviceProperties = us::ServiceProperties(),
+		                                       const ::us::ServiceProperties& componentParameters = us::ServiceProperties()) = 0 ;
+
+	template <class T>
+	bool remove(T *objClass)
+	{
+		return _remove(dynamic_cast<us::Base*>(objClass)) ;
+	}
+	virtual bool                         _remove(us::Base *instanceObjectPtr) = 0 ;
+
 };
 }
 

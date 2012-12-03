@@ -78,19 +78,25 @@ void ComponentHandle::unload()
     }
 }
 
-void* ComponentHandle::createObject(const std::string& createFunName)
+void* ComponentHandle::createObject(const std::string& createFunName, const us::ServiceProperties& componentParameters)
 {
+
     void* (*create)() ;
+	void* (*createParam)(const ::us::ServiceProperties& parameters) ;
+
+	std::string createParamName = createFunName + "_param" ;
 #ifdef US_PLATFORM_POSIX
+    createParam = (void* (*)(const ::us::ServiceProperties& parameters))dlsym(osHandle, createParamName.c_str()) ;
     create = (void* (*)())dlsym(osHandle, createFunName.c_str()) ;
-    if (!create)
+    if (!create && !createParam)
     {
         const char* err = dlerror() ;
         throw std::runtime_error(err ? std::string(err) : createFunName) ;
     }
 #else
+	createParam = (void* (*)(const ::us::ServiceProperties& parameters)) ::GetProcAddress((HMODULE)osHandle, createParamName.c_str()) ;
     create = (void* (*)()) ::GetProcAddress((HMODULE)osHandle, createFunName.c_str()) ;
-    if (!create)
+    if (!create && !createParam)
     {
         std::string             errMsg = "create " ;
         std::ostringstream      oss ;
@@ -99,6 +105,8 @@ void* ComponentHandle::createObject(const std::string& createFunName)
         throw std::runtime_error(errMsg) ;
     }
 #endif
+	if (createParam != NULL)
+		return createParam(componentParameters) ;
     return create() ;
 }
 
@@ -127,11 +135,11 @@ void ComponentHandle::callMethod1(const std::string& methodName, void* instance,
     return funCallMethod1(instance, param) ;
 }
 
-void ComponentHandle::callActivate(const std::string& methodName, void* instance, const std::map<std::string, std::string>& param)
+void ComponentHandle::callActivate(const std::string& methodName, void* instance, const ::us::ServiceProperties& param)
 {
 	// Typedefs
 	typedef void (* Activate)(void*) ;
-	typedef void (* ActivateParam)(void*, const std::map<std::string, std::string>&) ;
+	typedef void (* ActivateParam)(void*, const ::us::ServiceProperties&) ;
 
 	// Method
     Activate funActivateMethod = NULL;

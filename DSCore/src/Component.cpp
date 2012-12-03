@@ -26,7 +26,7 @@ namespace ds4cpp {
 
 // Static functions
 static std::string getCreateMethodName(const ComponentDescriptor& desc);
-static std::string getBindServiceMethodName(const ComponentDescriptor&, const std::string&, ComponentReference::Cardinality);
+static std::string getBindServiceMethodName(const ComponentDescriptor& descriptor, const std::string& serviceName, const std::string& refName, ComponentReference::Cardinality cardinality, bool add = true) ;
 static std::string getActivateMethodName(const ComponentDescriptor&);
 
 ds4cpp::Component::Component(const us::Module* module, const ComponentDescriptor& descriptor) :
@@ -83,7 +83,7 @@ void *Component::callCreate(ComponentInstance *componentInstance)
 	// find create method name!
 	std::string create_method_name = getCreateMethodName(descriptor);
 	US_DEBUG << "Calling method named :" << create_method_name ;
-	return getHandle()->createObject(create_method_name) ;
+	return getHandle()->createObject(create_method_name, componentInstance->getComponentParameters()) ;
 }
 
 void Component::callActivate(ComponentInstance* instance) 
@@ -92,21 +92,27 @@ void Component::callActivate(ComponentInstance* instance)
 	std::string activateMethodName = getActivateMethodName(descriptor);
 	US_DEBUG << "Trying to call activate";
 
-	// Convert parameters as std::map
-	std::map<std::string, std::string> stdParam ;
-	for (auto it = instance->getProperties().begin(); it != instance->getProperties().end(); ++it)
-	{
-		stdParam[it->first] = it->second.ToString() ;
-	}
-
 	// Call activate method on module
-	this->handle->callActivate(activateMethodName, instance->instanceObject, stdParam);
+	this->handle->callActivate(activateMethodName, instance->instanceObject, instance->getProperties());
 }
 
-void Component::callBind(ComponentInstance* componentInstance, const us::ServiceReference& SvcReference, const std::string& interfaceName, ComponentReference::Cardinality cardinality)
+void Component::callBind(ComponentInstance* componentInstance, const us::ServiceReference& SvcReference, const std::string& interfaceName, const std::string& refName, ComponentReference::Cardinality cardinality)
 {
 	// Retrieve bind method name
-	std::string bindMethodName = getBindServiceMethodName(descriptor, interfaceName, cardinality) ;
+	std::string bindMethodName = getBindServiceMethodName(descriptor, interfaceName, refName, cardinality) ;
+	US_DEBUG << "Calling method " << bindMethodName ;
+
+	// Retrieve us::base ptr
+	us::Base* service = module->GetModuleContext()->GetService(SvcReference);
+
+	// Call bind method on module
+	this->handle->callMethod1(bindMethodName, componentInstance->instanceObject, service);
+}
+
+void Component::callUnbind(ComponentInstance* componentInstance, const us::ServiceReference& SvcReference, const std::string& interfaceName, const std::string& refName, ComponentReference::Cardinality cardinality)
+{
+	// Retrieve bind method name
+	std::string bindMethodName = getBindServiceMethodName(descriptor, interfaceName, refName, cardinality, false) ;
 	US_DEBUG << "Calling method " << bindMethodName ;
 
 	// Retrieve us::base ptr
@@ -126,14 +132,43 @@ void Component::publishServices(ComponentInstance* componentInstance)
 		string service = (*descriptor.providedServices)[i];
 
 		// CppMicroService register service
-		module->GetModuleContext()->RegisterService(service.c_str(), componentInstance->instanceObject, componentInstance->getProperties());		
+		us::ServiceRegistration reg = module->GetModuleContext()->RegisterService(service.c_str(), componentInstance->instanceObject, componentInstance->getProperties());
+		componentInstance->providedServiceRegistration.insert(std::pair<std::string, us::ServiceRegistration>(service, reg)) ;
 	}
 }
 
-ComponentInstance* Component::newEmptyComponentInstance(const us::ServiceProperties& overrideProperties)
+void Component::unpublishServices(ComponentInstance* componentInstance)
+{
+	// Unregister instance
+	for (auto it = instances.begin(); it != instances.end(); ++it)
+	{
+		if (*it == componentInstance)
+		{
+			instances.erase(it) ;
+			break ;
+		}
+	}
+
+	// Unpublish provided services
+	for (vector<double>::size_type i = 0;
+			i < (*descriptor.providedServices).size(); i++) 
+	{
+		// Get provided service interface name
+		string service = (*descriptor.providedServices)[i];
+
+		// CppMicroService unregister with serviceref
+		auto it = componentInstance->providedServiceRegistration.find(service) ;
+		if (it != componentInstance->providedServiceRegistration.end())
+		{
+			it->second.Unregister() ;
+		}
+	}
+}
+
+ComponentInstance* Component::newEmptyComponentInstance(const us::ServiceProperties& overrideProperties, const us::ServiceProperties& componentParameters)
 {
 	// Create an empty instance and store it
-	ComponentInstance *componentInstance = new ComponentInstance(this, overrideProperties) ;
+	ComponentInstance *componentInstance = new ComponentInstance(this, overrideProperties, componentParameters) ;
 	instances.push_back(componentInstance) ;
 	return componentInstance ;
 }
@@ -170,55 +205,88 @@ static std::string getActivateMethodName(const ComponentDescriptor& descriptor)
 	return activate_method_name;
 }
 
-static std::string getBindServiceMethodName(
-		const ComponentDescriptor& descriptor, const std::string& serviceName,
-		ComponentReference::Cardinality cardinality) {
+static std::string getBindServiceMethodName(const ComponentDescriptor& descriptor, const std::string& serviceName, const std::string& refName, ComponentReference::Cardinality cardinality, bool add) 
+{
 	string bind_service_method_name = "__";
-	for (unsigned int i = 0; i < descriptor.componentId.size(); i++) {
+	for (unsigned int i = 0; i < descriptor.componentId.size(); i++) 
+	{
 		char c = descriptor.componentId[i];
-		if (c == ':') {
+		if (c == ':') 
+		{
 			c = '_';
 		}
 		bind_service_method_name.append(1, c);
 	}
+
 	bind_service_method_name.append("__");
-	if (cardinality == ComponentReference::SINGLE) {
-		bind_service_method_name.append("set");
-	} else {
-		bind_service_method_name.append("add");
+	if (cardinality == ComponentReference::SINGLE) 
+	{
+		if (add)
+			bind_service_method_name.append("set");
+		else
+			bind_service_method_name.append("unset");
+	} 
+	else 
+	{
+		if (add)
+			bind_service_method_name.append("add");
+		else
+			bind_service_method_name.append("remove");
 	}
+
 	bind_service_method_name.append("_");
-	for (unsigned int i = 0; i < serviceName.size(); i++) {
+	for (unsigned int i = 0; i < serviceName.size(); i++)
+	{
 		char c = serviceName[i];
-		if (c == ':') {
+		if (c == ':') 
+		{
 			c = '_';
 		}
 		bind_service_method_name.append(1, c);
+	}
+	if (!refName.empty() && refName != serviceName)
+	{
+		bind_service_method_name.append("_");
+		for (unsigned int i = 0; i < refName.size(); i++)
+		{
+			char c = refName[i];
+			if (c == ':') 
+			{
+				c = '_';
+			}
+			bind_service_method_name.append(1, c);
+		}
 	}
 	return bind_service_method_name;
 }
 
-static std::string getUnbindServiceMethodName(
-		const ComponentDescriptor& descriptor, const std::string& serviceName,
-		ComponentReference::Cardinality cardinality) {
+static std::string getUnbindServiceMethodName(const ComponentDescriptor& descriptor, const std::string& serviceName, ComponentReference::Cardinality cardinality)
+{
 	string bind_service_method_name = "__";
-	for (unsigned int i = 0; i < descriptor.componentId.size(); i++) {
+	for (unsigned int i = 0; i < descriptor.componentId.size(); i++) 
+	{
 		char c = descriptor.componentId[i];
-		if (c == ':') {
+		if (c == ':') 
+		{
 			c = '_';
 		}
 		bind_service_method_name.append(1, c);
 	}
+
 	bind_service_method_name.append("__");
-	if (cardinality == ComponentReference::SINGLE) {
+	if (cardinality == ComponentReference::SINGLE) 
+	{
 		bind_service_method_name.append("unset");
 	} else {
 		bind_service_method_name.append("remove");
 	}
+
 	bind_service_method_name.append("_");
-	for (unsigned int i = 0; i < serviceName.size(); i++) {
+	for (unsigned int i = 0; i < serviceName.size(); i++) 
+	{
 		char c = serviceName[i];
-		if (c == ':') {
+		if (c == ':') 
+		{
 			c = '_';
 		}
 		bind_service_method_name.append(1, c);

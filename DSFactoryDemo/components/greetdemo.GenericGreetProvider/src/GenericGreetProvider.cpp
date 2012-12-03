@@ -22,7 +22,7 @@
 
 namespace greetdemo {
 
-GenericGreetProvider::GenericGreetProvider() {
+GenericGreetProvider::GenericGreetProvider(const us::ServiceProperties& parameters) {
 }
 
 GenericGreetProvider::~GenericGreetProvider() {
@@ -31,15 +31,12 @@ GenericGreetProvider::~GenericGreetProvider() {
 /**
  * Activate callback, called when the component is activated.
  */
-void GenericGreetProvider::activate(const std::map<std::string, std::string>& param)
+void GenericGreetProvider::activate(const us::ServiceProperties& param)
 {
-	// const & causes problems, because I am lazy man i do a local copy
-	std::map<std::string, std::string> localMap = param ;
-
 	// Store parameters
-	_lang = localMap["providedLang"] ;
-	_greeting = localMap["greeting"] ;
-	_defaultTarget = localMap["defaultTarget"] ;
+	_lang = param.at("providedLang").ToString() ;
+	_greeting = param.at("greeting").ToString() ;
+	_defaultTarget = param.at("defaultTarget").ToString() ;
 }
 
 

@@ -36,6 +36,145 @@ ComponentManagerImpl::~ComponentManagerImpl()
                                    &ComponentManagerImpl::handleServiceEvent) ;
 }
 
+std::list<ComponentInstance*> ComponentManagerImpl::getInstanceListeningService(const std::string& service, const us::ServiceReference& ref)
+{
+	std::list<ComponentInstance*> listeningInstancies ;
+
+	// Retrieve components that has reference on the incoming service
+    std::list<ComponentInstance*>* ComponentInstances = componentReferences[service] ;
+
+	// Valid ?
+    if (ComponentInstances)
+    {
+        for (auto compoInstIt = ComponentInstances->begin() ;
+                compoInstIt != ComponentInstances->end() ; ++compoInstIt)
+        {
+
+			// Find the reference to know if there is a target
+			for (auto referenceIt = (*compoInstIt)->getResolvedReferences().begin();
+				referenceIt != (*compoInstIt)->getResolvedReferences().end(); ++referenceIt)
+			{
+				// Is it the good reference ?
+				if (referenceIt->interface == service)
+				{
+					// Check if the cardinality is multiple
+					// Or if it is single if there isn't already a reference on a service
+					if (referenceIt->cardinality == ComponentReference::MULTIPLE || 
+						(referenceIt->cardinality == ComponentReference::SINGLE && (*compoInstIt)->serviceReferences.count(referenceIt->interface) == 0))
+					{
+						bool bind = true ;
+
+						// Is there a target ?
+						if (!referenceIt->target.empty())
+						{
+							try
+							{
+								LDAPFilter filter(referenceIt->target) ;
+								bind = filter.Match(ref) ;
+							}
+							catch (std::exception e)
+							{
+								US_ERROR << "Error on LDAP filter : " << e.what() ;
+								bind = false ;
+							}
+						}
+
+						// Filter match ? (or is empty)
+						if (bind)
+						{
+							listeningInstancies.push_back(*compoInstIt) ;
+						}
+					}
+				}
+			}
+        }
+    }
+	return listeningInstancies ;
+}
+
+std::list<ComponentInstance*> ComponentManagerImpl::getInstanceProvidingAService(const ComponentReference& reference, const std::string& requireService)
+{
+	std::list<ComponentInstance *> matchList ;
+	for (auto componentIt = components.begin(); componentIt != components.end(); ++componentIt)
+	{
+		// Do a preliminary filter on provided interface and after check about reference filter
+		for (auto componentProvidedServiceIt = (*componentIt)->descriptor.providedServices->begin(); componentProvidedServiceIt != (*componentIt)->descriptor.providedServices->end(); ++componentProvidedServiceIt)
+		{
+			if (requireService == (*componentProvidedServiceIt))
+			{
+				// Loop on each component instance to get matching instance
+				for (auto compInstIt = (*componentIt)->instances.begin(); compInstIt != (*componentIt)->instances.end(); ++compInstIt)
+				{
+					bool match = true ;
+
+					// Is there a target ?
+					if (!reference.target.empty())
+					{
+						// Apply ldap filter
+						try
+						{
+							LDAPFilter filter(reference.target) ;
+							match = filter.Match((*compInstIt)->getProperties()) ;
+						}
+						catch (std::exception e)
+						{
+							US_ERROR << "Error on LDAP filter : " << e.what() ;
+							match = false ;
+						}	
+					}
+					if (match)
+					{
+						matchList.push_back(*compInstIt) ;
+					}
+				}
+			}
+		}
+	}
+	return matchList ;
+}
+
+void ComponentManagerImpl::referenceHasLeft(ComponentInstance *instance, const std::string& interface, const us::ServiceReference& ref)
+{
+	for (auto refsIt = instance->getResolvedReferences().begin(); refsIt != instance->getResolvedReferences().end(); ++refsIt)
+	{
+		// If there is several reference on this interface it may have a bug here
+		if (refsIt->interface == interface)
+		{
+			if (refsIt->policy == ComponentReference::DYNAMIC && refsIt->cardinality == ComponentReference::SINGLE)
+			{
+				// Policy is dynamic we are looking for a new reference
+				std::list<ComponentInstance *> providingInstance = getInstanceProvidingAService(*refsIt, interface) ;
+				if (providingInstance.size() != 0)
+				{
+					ComponentInstance *replacingOne = providingInstance.front() ;
+					us::ServiceReference ref = replacingOne->providedServiceRegistration[interface].GetReference() ;
+
+					// New one
+					instance->bindService(interface, refsIt->name, ref) ;
+					// leaving
+					instance->unbindService(interface, refsIt->name, ref) ;
+				}
+				else
+				{
+					if (refsIt->type == ComponentReference::MANDATORY_REF)
+					{
+						// Dead...
+						instance->unregister() ;
+						return ;
+					}
+					// It is not a mandatory reference we can let the instance living
+					return ;
+				}
+			}
+			else
+			{
+				instance->unbindService(interface, refsIt->name, ref) ;
+			}
+
+		}
+	}
+}
+
 void ComponentManagerImpl::handleServiceEvent(ServiceEvent event)
 {
     if (event.GetType() == ServiceEvent::REGISTERED)
@@ -46,58 +185,55 @@ void ComponentManagerImpl::handleServiceEvent(ServiceEvent event)
 
         // For each objectClass provided by the service object
         // find the appropriate components who want it and give it
-        for (auto objClassIt = interfaces.begin() ;
-             objClassIt != interfaces.end() ; ++objClassIt)
+        for (auto objClassIt = interfaces.begin() ; objClassIt != interfaces.end() ; ++objClassIt)
         {
-			// Retrieve components that has reference on the incoming service
-            std::list<ComponentInstance*>* ComponentInstances = componentReferences[*objClassIt] ;
+			// Retrieve the list of service that are listening to this leaving service
+			auto listeningServices = getInstanceListeningService(*objClassIt, event.GetServiceReference()) ;
+			for (auto lsIt = listeningServices.begin(); lsIt != listeningServices.end(); ++lsIt)
+			{
 
-			// Valid ?
-            if (ComponentInstances)
-            {
-                for (auto compoInstIt = ComponentInstances->begin() ;
-                     compoInstIt != ComponentInstances->end() ; ++compoInstIt)
-                {
-
-					// Find the reference to know if there is a target
-					for (auto referenceIt = (*compoInstIt)->getResolvedReferences().begin();
-						referenceIt != (*compoInstIt)->getResolvedReferences().end(); ++referenceIt)
-					{
-						// Incoming service reference ?
-						if (referenceIt->interface == *objClassIt)
-						{
-							bool bind = true ;
-
-							// Is there a target ?
-							if (!referenceIt->target.empty())
-							{
-								LDAPFilter filter(referenceIt->target) ;
-								bind = filter.Match(event.GetServiceReference()) ;
-							}
-
-							// Filter match ? (or is empty)
-							if (bind)
-							{
-								// Register the incoming service
-								(*compoInstIt)->bindService(*objClassIt, event.GetServiceReference()) ;
-								// Enable the instance ?
-								enableIfSatisfied(*compoInstIt) ;
-							}
-						}
+				for (auto refsIt = (*lsIt)->getResolvedReferences().begin(); refsIt != (*lsIt)->getResolvedReferences().end(); ++refsIt)
+				{
+					if (refsIt->interface == *objClassIt)
+					{					
+						// Register the incoming service
+						(*lsIt)->bindService(*objClassIt, refsIt->name, event.GetServiceReference()) ;
+						// Enable the instance ?
+						enableIfSatisfied(*lsIt) ;
 					}
-                }
-            }
+				}
+			}
         }
     }
     else if (event.GetType() == ServiceEvent::UNREGISTERING)
     {
+		// Outcoming services 
+        std::list<string> interfaces = any_cast<std::list<string> >(event.GetServiceReference().GetProperty(ServiceConstants::OBJECTCLASS())) ;
+        US_INFO << "Outcoming Service : " << interfaces ;
+
+        // For each objectClass provided by the service object
+        // find the appropriate components who want it and withdraw it
+        for (auto objClassIt = interfaces.begin(); objClassIt != interfaces.end() ; ++objClassIt)
+        {
+			// Retrieve the list of service that are listening to this leaving service
+			auto listeningServices = getInstanceListeningService(*objClassIt, event.GetServiceReference()) ;
+			for (auto lsIt = listeningServices.begin(); lsIt != listeningServices.end(); ++lsIt)
+			{
+				referenceHasLeft(*lsIt, *objClassIt, event.GetServiceReference()) ;
+			}
+		}
     }
+}
+
+void ComponentManagerImpl::outcomingComponentInstance(ComponentInstance *instance) 
+{
+	// Unregister...
+	instance->unregister() ;
 }
 
 void ComponentManagerImpl::newComponent(Module* module, const ComponentDescriptor& descriptor)
 {
-    US_DEBUG << "New component descriptor: " << descriptor.componentId
-    << " provided by " << module->GetName() ;
+    US_DEBUG << "New component descriptor: " << descriptor.componentId << " provided by " << module->GetName() ;
 
 	// Build the component
 	Component *component = new Component(module, descriptor) ;
@@ -122,20 +258,20 @@ void ComponentManagerImpl::newComponent(Module* module, const ComponentDescripto
 	newComponentInstance(component) ;
 }
 
-ComponentInstance* ComponentManagerImpl::newComponentInstance(Component *component, const us::ServiceProperties& overrideProperties)
+ComponentInstance* ComponentManagerImpl::newComponentInstance(Component *component, const us::ServiceProperties& overrideProperties, const us::ServiceProperties& componentProperties)
 {
 	ComponentInstance *instance ;
 	if (!component->factory)
 	{
 		// Create an empty instance
-		instance = component->newEmptyComponentInstance(overrideProperties) ;
+		instance = component->newEmptyComponentInstance(overrideProperties, componentProperties) ;
 	}
 	else
 	{
 		instance = component->instances.at(0) ; // Factory are singleton
 	}
 
-	// Update component references map (for the moment it don't work with factory)
+	// Update component references map
 	auto        refs = instance->getResolvedReferences() ;
 	for (auto it = refs.begin() ; it != refs.end() ; ++it)
 	{
@@ -170,7 +306,7 @@ void ComponentManagerImpl::injectAvailableReferencies(ComponentInstance* instanc
         // take first available
         for (auto it2 = refs.begin(); it2 != refs.end(); ++it2)
         {
-            instance->bindService(it->interface, *it2) ;
+			instance->bindService(it->interface, it->name, *it2) ;
         }
     }
 

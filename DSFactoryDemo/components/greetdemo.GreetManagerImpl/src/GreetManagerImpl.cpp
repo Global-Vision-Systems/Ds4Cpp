@@ -122,6 +122,15 @@ void GreetManagerImpl::activate()
 	}
 }
 
+void GreetManagerImpl::reset()
+{
+	for (auto it = providersByLang.begin(); it != providersByLang.end(); ++it)
+	{
+		greetProviderFactory->remove(it->second);
+		break ;
+	}
+}
+
 } // namespace greetdemo
 
 

@@ -24,6 +24,7 @@
 #include "ds4cpp/ComponentFactory.hpp"
 #include "ComponentInstance.h"
 #include "ComponentDescriptor.h"
+#include <map>
 
 namespace ds4cpp
 {
@@ -37,12 +38,15 @@ public:
 	virtual ~ComponentFactoryImpl() ;
 
 	ComponentDescriptor *getFactoryDescriptor() const ;
+	const us::ServiceProperties& getFactoryProperties() const ;
 
-	ComponentInstance *  create(const ::us::ServiceProperties& prop) ;
+	ComponentInstance *  create(const ::us::ServiceProperties& serviceProperties, const ::us::ServiceProperties& componentParameters) ;
+	bool                 _remove(us::Base *instanceObjectPtr) ;
 private:
-	ComponentDescriptor  *  factoryDescriptor ;
-	Component            *  buildComponent ;
-	ComponentManagerImpl *  componentManager ;
+	ComponentDescriptor  *           factoryDescriptor ;
+	Component            *           buildComponent ;
+	ComponentManagerImpl *           componentManager ;
+	std::vector<ComponentInstance*>  builtInstancies ;
 };
 
 

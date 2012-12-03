@@ -18,5 +18,6 @@ component greetdemo.GreetManagerImpl {
 	}
 	references {
 		dynamic service greetdemo.GreetProvider [0..n]
+		dynamic service ds4cpp.ComponentFactory filter="(component.name=greetdemo::GreetProvider)"
 	}
 }

@@ -36,9 +36,9 @@ namespace ds4cpp
 class ComponentManagerImpl : public::us::Base, public ComponentManager
 {
 private:
-    std::vector<Component*>                                     components ;
-    std::map<std::string, std::list<ComponentInstance*>*>       componentReferences ;
-    ModuleContext*                                              context ;
+    std::vector<Component*>                                     components ;          /**< List of all the component */
+    std::map<std::string, std::list<ComponentInstance*>*>       componentReferences ; /**< List of the component that has a reference on an interface */ 
+    ModuleContext*                                              context ;             /**< CppMicroService module context */
 
 friend class ComponentFactoryImpl ;
 
@@ -46,16 +46,50 @@ public:
     ComponentManagerImpl(ModuleContext* context) ;
     virtual ~ComponentManagerImpl() ;
 
+	/**
+	 * New component description
+	 */
 	void newComponent(Module* module, const ComponentDescriptor& descriptor) ;
 
+	/**
+	 * A component instance is leaving
+	 */
+	void outcomingComponentInstance(ComponentInstance *instance) ;
+
+	/**
+	 * Cpp micro service service event handler
+	 */
     void handleServiceEvent(ServiceEvent event) ;
 
 private:
-	ComponentInstance *newComponentInstance(Component* component, const us::ServiceProperties& overrideProperties = us::ServiceProperties()) ;
-
-	void injectAvailableReferencies(ComponentInstance* component) ;
-
+	/**
+	 * Build a new component instance
+	 */
+	ComponentInstance *newComponentInstance(Component* component, const us::ServiceProperties& overrideProperties = us::ServiceProperties(),
+																  const us::ServiceProperties& componentParameters = us::ServiceProperties()) ;
+	/**
+	 * Inject the new service instance into living component instance
+	 */
+	void injectAvailableReferencies(ComponentInstance* instance) ;
+	/**
+	 * Enable the instance if it is satisfied
+	 */
     bool enableIfSatisfied(ComponentInstance* instance) ;
+
+	/**
+	 * Retrieve the list of component that are listenening the service and matching with its properties
+	 */
+	std::list<ComponentInstance*> getInstanceListeningService(const std::string& service, const us::ServiceReference& ref) ;
+
+	/**
+	 * Retrieve the list of the components providing a service et matching with the reference target
+	 */
+	std::list<ComponentInstance*> getInstanceProvidingAService(const ComponentReference& reference, const std::string& requireService) ;
+
+	/**
+	 * Remove reference instance (interface) to the provide instance
+	 */
+	void referenceHasLeft(ComponentInstance *instance, const std::string& interface, const us::ServiceReference& ref) ;
 } ;
 }       /* namespace ds4cpp */
 #endif /* COMPONENTMANAGER_H_ */

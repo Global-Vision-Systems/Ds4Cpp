@@ -38,6 +38,8 @@ namespace greetdemo {
     virtual std::list<std::string> getAllGreetings(const std::string& who) const = 0 ;
 
     virtual std::list<std::string> getAvailableLanguages() const = 0 ;
+
+	virtual void reset() = 0 ;
 } ;
 
 } // namespace greetdemo

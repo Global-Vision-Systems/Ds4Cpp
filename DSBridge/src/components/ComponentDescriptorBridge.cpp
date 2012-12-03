@@ -18,7 +18,7 @@
  *      Author: simon
  */
 #include <iostream>
-#include <ComponentManager.h>
+#include <ds4cpp/ComponentManager.hpp>
 #include <ComponentDescriptor.h>
 #include "../../include/ComponentProvider.h"
 namespace ds4cpp

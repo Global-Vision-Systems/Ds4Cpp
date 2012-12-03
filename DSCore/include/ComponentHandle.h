@@ -19,6 +19,7 @@
 #include <usUtils_p.h>
 #include <usModuleRegistry.h>
 #include <usModuleActivator.h>
+#include <usServiceProperties.h>
 #include <map>
 
 // UNIX Defines
@@ -54,14 +55,14 @@ public:
 
     ComponentHandle* load() ;
 
-    void* createObject(const std::string& createFunName) ;
+    void* createObject(const std::string& createFunName, const ::us::ServiceProperties& componentParameters) ;
 
     /**
      * Call method with 1 param
      */
     void callMethod1(const std::string& methodName, void* instance, void* param) ;
 
-    void callActivate(const std::string& methodName, void* instance, const std::map<std::string, std::string>& param) ;
+    void callActivate(const std::string& methodName, void* instance, const ::us::ServiceProperties& param) ;
 
     void unload() ;
 
