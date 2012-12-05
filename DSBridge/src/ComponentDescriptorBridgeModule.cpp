@@ -69,8 +69,25 @@ public:
         componentManager->newComponent(context->GetModule(), *bridgeDesc) ;
     }
 
-    void Unload(ModuleContext* /*context*/)
+    void Unload(ModuleContext* context)
     {
+		// Retrieve ComponentManager
+        ServiceReference                        ref = context->GetServiceReference<ComponentManager>() ;
+        if (!ref)
+        {
+            logFail() ;
+            return ;
+        }
+        ComponentManager*                       componentManager = context->GetService<
+            ComponentManager>(ref) ;
+        if (!componentManager)
+        {
+            logFail() ;
+            return ;
+        }
+
+        // Notify that the bridge is down...
+		componentManager->removeModuleComponents(context->GetModule()) ;
     }
 } ;
 

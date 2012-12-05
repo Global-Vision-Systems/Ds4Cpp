@@ -46,6 +46,17 @@ public:
     ComponentManagerImpl(ModuleContext* context) ;
     virtual ~ComponentManagerImpl() ;
 
+
+	/**
+	 * Remove all component created by this module
+	 */
+	void removeModuleComponents(Module* module) ;
+
+	/**
+	 * Remove a component with all his instance
+	 */
+	void removeComponent(Module* provindingModule, const ComponentDescriptor& descriptor) ;
+
 	/**
 	 * New component description
 	 */
@@ -86,6 +97,10 @@ private:
 	 */
 	std::list<ComponentInstance*> getInstanceProvidingAService(const ComponentReference& reference, const std::string& requireService) ;
 
+	/**
+	 * Retrieve a valid service reference into
+	 */
+	bool getValidServiceRef(const std::list<ComponentInstance *>& providingInstance, const std::string& interface, us::ServiceReference currentServiceRef, us::ServiceReference& replacingServiceReference) ;
 	/**
 	 * Remove reference instance (interface) to the provide instance
 	 */

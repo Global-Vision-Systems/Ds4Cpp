@@ -23,6 +23,7 @@
 #include <usModuleActivator.h>
 #include <usModuleContext.h>
 #include <usServiceProperties.h>
+#include <usServiceRegistration.h>
 
 #include <usBase.h>
 #include <algorithm>
@@ -51,9 +52,11 @@ public:
         context->RegisterService(clazz, this->componentManager) ;
     }
 
-    void Unload(ModuleContext* /*context*/)
-    {
+    void Unload(ModuleContext* context)
+	{
+		delete componentManager;
     }
+
 } ;
 
 

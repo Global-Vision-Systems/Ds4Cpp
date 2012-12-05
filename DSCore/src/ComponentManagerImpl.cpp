@@ -124,6 +124,20 @@ std::list<ComponentInstance*> ComponentManagerImpl::getInstanceProvidingAService
 	return matchList ;
 }
 
+bool ComponentManagerImpl::getValidServiceRef(const std::list<ComponentInstance *>& providingInstance, const std::string& interface, us::ServiceReference currentServiceRef, us::ServiceReference& replacingServiceReference)
+{
+	for (std::list<ComponentInstance *>::const_iterator instIt = providingInstance.begin(); instIt != providingInstance.end(); ++instIt)
+	{
+		std::map<std::string, us::ServiceRegistration>::iterator it = (*instIt)->providedServiceRegistration.find(interface) ;
+		if (it != (*instIt)->providedServiceRegistration.end() && it->second.GetReference() != currentServiceRef)
+		{
+			replacingServiceReference = it->second.GetReference() ;
+			return true ;
+		}
+	}
+	return false ;
+}
+
 void ComponentManagerImpl::referenceHasLeft(ComponentInstance *instance, const std::string& interface, const us::ServiceReference& ref)
 {
 	for (auto refsIt = instance->getResolvedReferences().begin(); refsIt != instance->getResolvedReferences().end(); ++refsIt)
@@ -135,24 +149,15 @@ void ComponentManagerImpl::referenceHasLeft(ComponentInstance *instance, const s
 			{
 				// Policy is dynamic we are looking for a new reference
 				std::list<ComponentInstance *> providingInstance = getInstanceProvidingAService(*refsIt, interface) ;
-				if (providingInstance.size() != 0)
+				us::ServiceReference replacingServiceRef ;
+				if (getValidServiceRef(providingInstance, interface, ref, replacingServiceRef))
 				{
-					ComponentInstance *replacingOne = providingInstance.front() ;
-					std::map<std::string, us::ServiceRegistration>::iterator it = replacingOne->providedServiceRegistration.find(interface) ;
-					if (it == replacingOne->providedServiceRegistration.end())
-					{
-						// It should never happen
-						US_ERROR << "Internal error, please notify ds4cpp on github" ;
-						return ;
-					}
-					us::ServiceReference replaceOneRef = it->second.GetReference() ;
-
 					// We want the component be able to live during the replacing of the interface, so we call bind before unbind
-					instance->bindService(interface, refsIt->name, replaceOneRef) ;
+					instance->bindService(interface, refsIt->name, replacingServiceRef) ;
 					instance->unbindService(interface, refsIt->name, ref) ;
 				}
-				else
-				{ // cardinality = multiple
+				else 
+                { // No replacing service
 
 					if (refsIt->type == ComponentReference::MANDATORY_REF && instance->serviceReferences.count(interface) == 1)
 					{
@@ -234,8 +239,75 @@ void ComponentManagerImpl::handleServiceEvent(ServiceEvent event)
 
 void ComponentManagerImpl::outcomingComponentInstance(ComponentInstance *instance) 
 {
+	for (auto refIt = instance->getResolvedReferences().begin(); refIt != instance->getResolvedReferences().end(); ++refIt)
+	{
+		// Remove instance from component reference
+		std::list<ComponentInstance*>* componentInstances = componentReferences[refIt->interface] ;
+		for (auto refInstIt = componentInstances->begin(); refInstIt != componentInstances->end(); ++refInstIt)
+		{
+			if (*refInstIt == instance)
+			{
+				componentInstances->erase(refInstIt) ;
+				break ;
+			}
+		}
+		if (componentInstances->size() == 0)
+		{
+			componentReferences[refIt->interface] = NULL ;
+			delete componentInstances ;
+		}
+	}
 	// Unregister...
 	instance->unregister() ;
+}
+
+void ComponentManagerImpl::removeModuleComponents(Module* module)
+{
+	for (std::vector<Component *>::iterator it = this->components.begin(); it != this->components.end(); ++it)
+	{
+		if ((*it)->module == module)
+		{
+			Component *outcomingComponent = *it ;
+			// Erase component and retrieve the next iterator
+			std::vector<Component *>::iterator tmp = it ;
+			it = this->components.erase(it) ;
+
+			// Unregister instancies
+			while (!outcomingComponent->instances.empty())
+			{
+				outcomingComponentInstance(outcomingComponent->instances.front()) ;		
+			}
+		}
+	}
+}
+
+void ComponentManagerImpl::removeComponent(Module* module, const ComponentDescriptor& descriptor)
+{
+	US_DEBUG << "Outcoming component descriptor: " << descriptor.componentId << " provided by " << module->GetName() ;
+
+	// Find the corresponding component
+	Component* outcomingComponent = NULL ;
+	for (std::vector<Component *>::iterator it = this->components.begin(); it != this->components.end(); ++it)
+	{
+		if ((*it)->descriptor.componentId == descriptor.componentId)
+		{
+			outcomingComponent = *it ;
+
+			// Unregister component
+			this->components.erase(it) ;
+			break ;
+		}
+	}
+	if (outcomingComponent != NULL)
+	{
+		// Unregister instancies
+		while (!outcomingComponent->instances.empty())
+		{
+			outcomingComponentInstance(outcomingComponent->instances.front()) ;		
+		}
+		return ;
+	}
+	US_ERROR << "Unknow outcoming component \"" << descriptor.componentId ;
 }
 
 void ComponentManagerImpl::newComponent(Module* module, const ComponentDescriptor& descriptor)

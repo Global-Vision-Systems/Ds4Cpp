@@ -34,6 +34,8 @@ public:
     }
 
     virtual void newComponent(Module* provindingModule, const ComponentDescriptor& descriptor) = 0 ;
+    virtual void removeComponent(Module* provindingModule, const ComponentDescriptor& descriptor) = 0 ;
+	virtual void removeModuleComponents(Module* module) = 0 ;
 } ;
 }
 DECLARE_SERVICE_INTERFACE(ds4cpp::ComponentManager) ;

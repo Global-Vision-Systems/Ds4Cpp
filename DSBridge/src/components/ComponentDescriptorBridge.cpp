@@ -61,6 +61,11 @@ void ComponentDescriptorBridge::addComponentProvider(ComponentProvider* provider
 
 void ComponentDescriptorBridge::removeComponentProvider(ComponentProvider* provider)
 {
-    // do nothing yet
+    std::vector<ComponentDescriptor*>* descriptors = provider->getComponentDescriptors() ;
+    for (unsigned int i = 0 ; i < descriptors->size() ; i++)
+    {
+        ComponentDescriptor* desc = descriptors->at(i) ;
+        componentManager->removeComponent(provider->getProvider(), *desc) ;
+    }	
 }
 }
