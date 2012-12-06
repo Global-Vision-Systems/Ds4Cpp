@@ -21,6 +21,7 @@
  */
 #include "ComponentDescriptor.h"
 #include <iostream>
+
 US_USE_NAMESPACE
 namespace ds4cpp
 {
@@ -75,7 +76,7 @@ ComponentDescriptor::~ComponentDescriptor()
 {
     delete providedServices ;
     delete references ;
-	delete properties ;
+    delete properties ;
 }
 }       /* namespace ds4cpp */
 std::ostream& operator<<(std::ostream& o, const ds4cpp::ComponentDescriptor& d)

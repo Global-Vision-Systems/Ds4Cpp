@@ -72,6 +72,10 @@ public:
 	 */
     void handleServiceEvent(ServiceEvent event) ;
 
+	/**
+	 * Cpp micro service module event handler
+	 */
+    void handleModuleEvent(ModuleEvent event) ;
 private:
 	/**
 	 * Build a new component instance

@@ -24,14 +24,25 @@
 US_USE_NAMESPACE
 namespace ds4cpp
 {
-ComponentManagerImpl::ComponentManagerImpl(ModuleContext* context) : context(context), components(*new vector<Component*>())
+ComponentManagerImpl::ComponentManagerImpl(ModuleContext* context) : context(context)
 {
     context->AddServiceListener(this, &ComponentManagerImpl::handleServiceEvent) ;
+    context->AddModuleListener(this, &ComponentManagerImpl::handleModuleEvent) ;
 }
 
 ComponentManagerImpl::~ComponentManagerImpl()
 {
     context->RemoveServiceListener(this, &ComponentManagerImpl::handleServiceEvent) ;
+    context->RemoveModuleListener(this, &ComponentManagerImpl::handleModuleEvent) ;
+}
+
+void ComponentManagerImpl::handleModuleEvent(ModuleEvent event)
+{
+	ModuleEvent::Type mt = event.GetType() ;
+	if (event.GetType() == ModuleEvent::UNLOADING)
+	{
+		this->removeModuleComponents(event.GetModule()) ;
+	}
 }
 
 std::list<ComponentInstance*> ComponentManagerImpl::getInstanceListeningService(const std::string& service, const us::ServiceReference& ref)
@@ -162,7 +173,7 @@ void ComponentManagerImpl::referenceHasLeft(ComponentInstance *instance, const s
 					if (refsIt->type == ComponentReference::MANDATORY_REF && instance->serviceReferences.count(interface) == 1)
 					{
 						// Dead...
-						instance->unregister() ;
+						outcomingComponentInstance(instance) ;
 						return ;
 					}
 					else
@@ -227,6 +238,27 @@ void ComponentManagerImpl::handleServiceEvent(ServiceEvent event)
         // find the appropriate components who want it and withdraw it
         for (auto objClassIt = interfaces.begin(); objClassIt != interfaces.end() ; ++objClassIt)
         {
+			// At the destruction of a module all registered services get unregistered, so if we found the component providing this service we had to delete it 
+			// (otherwise it has already been removed in Component::unpublishServices or on a previous way here)
+			//for (auto compIt = this->components.begin(); compIt != this->components.end(); ++compIt)
+			//{
+			//	bool find = false ;
+			//	for (auto compInstIt = (*compIt)->instances.begin(); compInstIt != (*compIt)->instances.end(); ++compInstIt)
+			//	{
+			//		auto compInstProvidesServiceReferenceIt = (*compInstIt)->providedServiceRegistration.find(*objClassIt) ;
+			//		if (compInstProvidesServiceReferenceIt != (*compInstIt)->providedServiceRegistration.end())
+			//		{
+			//			// The component is still alive, we have to destroy it
+			//			(*compInstIt)->providedServiceRegistration.erase(compInstProvidesServiceReferenceIt) ; // We don't want to unregister this service twice
+			//			this->outcomingComponentInstance((*compInstIt)) ;
+			//			find = true ;
+			//			break ;
+			//		}
+			//	}
+			//	if (find)
+			//		break ;
+			//}
+
 			// Retrieve the list of service that are listening to this leaving service
 			auto listeningServices = getInstanceListeningService(*objClassIt, event.GetServiceReference()) ;
 			for (auto lsIt = listeningServices.begin(); lsIt != listeningServices.end(); ++lsIt)
@@ -263,20 +295,27 @@ void ComponentManagerImpl::outcomingComponentInstance(ComponentInstance *instanc
 
 void ComponentManagerImpl::removeModuleComponents(Module* module)
 {
-	for (std::vector<Component *>::iterator it = this->components.begin(); it != this->components.end(); ++it)
+	for (std::vector<Component *>::iterator it = this->components.begin(); it != this->components.end(); )
 	{
 		if ((*it)->module == module)
 		{
 			Component *outcomingComponent = *it ;
 			// Erase component and retrieve the next iterator
 			std::vector<Component *>::iterator tmp = it ;
-			it = this->components.erase(it) ;
+			it = this->components.erase(tmp) ;
 
 			// Unregister instancies
 			while (!outcomingComponent->instances.empty())
 			{
 				outcomingComponentInstance(outcomingComponent->instances.front()) ;		
 			}
+			
+			// Free memory
+			delete outcomingComponent ;
+		}
+		else
+		{
+			++it;
 		}
 	}
 }
@@ -307,7 +346,7 @@ void ComponentManagerImpl::removeComponent(Module* module, const ComponentDescri
 		}
 		return ;
 	}
-	US_ERROR << "Unknow outcoming component \"" << descriptor.componentId ;
+	US_DEBUG << "Unknow outcoming component \"" << descriptor.componentId ;
 }
 
 void ComponentManagerImpl::newComponent(Module* module, const ComponentDescriptor& descriptor)

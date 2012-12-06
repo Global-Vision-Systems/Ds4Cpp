@@ -128,7 +128,8 @@ void ComponentInstance::unbindService(const std::string& interface, const std::s
 
 	if (wasValid && !isValid())
 	{
-		// Unpublish this component
+		// Unpublish this component 
+		// /!\ the good way to unregister a component is to call ComponentManagerImpl::outcomingComponentInstance it can cause crash here
 		this->unregister() ;
 	}
 	else
@@ -280,6 +281,13 @@ void ComponentInstance::unregister()
 {
 	component->unpublishServices(this) ;
 	component->callDeactivate(this) ;
+
+	// Free memory
+	if (this->instanceObject != NULL)
+	{
+		delete this->instanceObject ;
+		this->instanceObject = NULL ;
+	}
 }
 
 std::string ComponentInstance::replaceVariableInTarget(std::string target)

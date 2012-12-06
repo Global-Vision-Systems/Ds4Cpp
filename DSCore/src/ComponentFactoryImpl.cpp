@@ -23,7 +23,6 @@ ComponentFactoryImpl::ComponentFactoryImpl(ComponentManagerImpl *componentManage
 
 ComponentFactoryImpl::~ComponentFactoryImpl()
 {
-	delete factoryDescriptor ;
 }
 
 ComponentDescriptor *ComponentFactoryImpl::getFactoryDescriptor() const

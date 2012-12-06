@@ -66,6 +66,8 @@ void ComponentDescriptorBridge::removeComponentProvider(ComponentProvider* provi
     {
         ComponentDescriptor* desc = descriptors->at(i) ;
         componentManager->removeComponent(provider->getProvider(), *desc) ;
-    }	
+		delete desc ;
+    }
+	delete provider ;
 }
 }
