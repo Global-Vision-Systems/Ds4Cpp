@@ -185,8 +185,17 @@ void ComponentManagerImpl::referenceHasLeft(ComponentInstance *instance, const s
 			}
 			else
 			{
-				// Multiple cardinality, if the instance is unsatisfied it will be managed by the ComponentInstance himself
-				instance->unbindService(interface, refsIt->name, ref) ;
+				if (refsIt->type == ComponentReference::MANDATORY_REF && refsIt->cardinality == ComponentReference::SINGLE)
+				{
+					// As it is not a dynamic reference we don't try to replace it
+					outcomingComponentInstance(instance) ;
+					return ;
+				}
+				else
+				{
+					// Multiple cardinality, if the instance is unsatisfied it will be managed by the ComponentInstance himself
+					instance->unbindService(interface, refsIt->name, ref) ;
+				}
 			}
 
 		}
